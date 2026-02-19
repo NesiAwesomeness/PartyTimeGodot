@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://tudunt1fmlh1"]
+
+[ext_resource type="Script" uid="uid://d4clpcdqiby6w" path="res://tests/send_data_test.gd" id="1_32xws"]
+
+[node name="Control" type="Node" unique_id=1832654743]
+script = ExtResource("1_32xws")

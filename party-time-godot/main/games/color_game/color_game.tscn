@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://xd0ij5ynugkd"]
+
+[ext_resource type="Script" uid="uid://bh302m2rd0s4c" path="res://main/games/color_game/color_game.gd" id="1_8nefs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_idj4u"]
+bg_color = Color(1, 1, 1, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8nefs"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yr1bj"]
+draw_center = false
+
+[node name="ColorGame" type="Node" unique_id=1059524658]
+script = ExtResource("1_8nefs")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1394848336]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="." unique_id=1360990920]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_idj4u")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_8nefs")
+theme_override_styles/hover = SubResource("StyleBoxFlat_yr1bj")
+text = "Press me"
