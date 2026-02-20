@@ -30,6 +30,7 @@
 		stopListening();
 	}
 
+	let newRequest = false;
 	let requestUnsub = null;
 	let playgroundUnsub = null;
 
@@ -55,6 +56,7 @@
 				snapshot.forEach((doc) => {
 					tempItems.push({ id: doc.id, ...doc.data() });
 				});
+				tempItems.sort((a, b) => b.timestamp - a.timestamp);
 				$playgrounds = tempItems;
 			});
 
@@ -64,9 +66,29 @@
 				snapshot.forEach((doc) => {
 					tempItems.push({ id: doc.id, ...doc.data() });
 				});
+				tempItems.sort((a, b) => b.timestamp - a.timestamp);
+
+				const latestRequest = tempItems.reduce(
+					(max, request) => (request.timestamp > max.timestamp ? game : max),
+					{ timestamp: $userStore.lastCheckedRequests || 0 }
+				);
+
+				newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
 				$requests = tempItems;
 			});
 		}
+	}
+
+	let chatContainer = null;
+
+	$: if ($currentChat.gameArray && chatContainer) {
+		// Wait for the DOM to update with the new item
+		setTimeout(() => {
+			chatContainer.scrollTo({
+				top: chatContainer.scrollHeight,
+				behavior: 'smooth'
+			});
+		}, 50);
 	}
 
 	let gameOptions = [];
@@ -129,8 +151,14 @@
 		}
 	}
 
+	import { flip } from 'svelte/animate';
+	import { fly, fade } from 'svelte/transition';
+
+	import { quintInOut } from 'svelte/easing';
+	import { spring } from 'svelte/motion';
+
 	import GodotHolder from '$lib/components/GodotHolder.svelte';
-	
+
 	let lastClickedRect = null;
 	let isGameOpen = false;
 
@@ -175,6 +203,7 @@
 				y: lastClickedRect.offsetTop,
 				w: lastClickedRect.offsetWidth,
 				h: lastClickedRect.offsetHeight,
+
 				o: 0.0,
 				r: 16.0
 			});
@@ -199,10 +228,7 @@
 		}
 	}
 
-	import { fade } from 'svelte/transition';
-	import { quintInOut } from 'svelte/easing';
 	import { signOut } from 'firebase/auth';
-	import { spring } from 'svelte/motion';
 
 	async function handleLogOut() {
 		try {
@@ -257,8 +283,10 @@
 								src={request}
 								alt="Requests"
 								label="Requests"
+								highlight={requestList}
 								on:click={() => {
 									requestList = true;
+									$userStore.lastCheckedRequests = Date.now();
 								}}
 							/>
 						{/if}
@@ -281,8 +309,13 @@
 					<div class="chat-list-wrapper">
 						<span class="chat-list-label">Playgrounds</span>
 						<div class="chat-list panel">
-							{#each $playgrounds as item (item.id)}
-								<ChatItem chatItem={item} />
+							{#each $playgrounds as item, i (item.id)}
+								<div
+									animate:flip={{ duration: 400 }}
+									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
+								>
+									<ChatItem chatItem={item} />
+								</div>
 							{:else}
 								<span class="none-label">No Playgrounds</span>
 							{/each}
@@ -295,24 +328,35 @@
 					<button class="sign-out" on:click={handleLogOut}>Sign out</button>
 				</div>
 			</div>
-			<div class="playground-view">
+			<div
+				class="playground-view"
+				style="
+				grid-template-rows: 48px 1fr {$currentChat.id != '' ? '120px' : ''};
+			"
+			>
 				<div class="info panel box">
 					<div class="icon-placeholder"></div>
 					<p class="chat-title">{$currentChat.chatName}</p>
 				</div>
 				<div class="box panel">
-					<div class="plays">
-						{#each $currentChat.gameArray as item (item.id)}
-							<!-- Send the id as well... -->
-							<GameBubble gameData={item} id={item.id} on:click={openGame} />
+					<div class="plays" bind:this={chatContainer}>
+						{#each $currentChat.gameArray as item, i (item.id)}
+							<div
+								animate:flip={{ duration: 400 }}
+								in:fly={{ y: 20, duration: 300, delay: i * 50 }}
+							>
+								<GameBubble gameData={item} id={item.id} on:click={openGame} />
+							</div>
 						{/each}
 					</div>
 				</div>
-				<div class="game-options panel box">
-					{#each gameOptions as game (game.key)}
-						<GameOption {game} />
-					{/each}
-				</div>
+				{#if $currentChat.id != ''}
+					<div class="game-options panel box">
+						{#each gameOptions as game (game.key)}
+							<GameOption {game} />
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -321,6 +365,7 @@
 <style>
 	.none-label {
 		color: rgba(255, 255, 255, 0.2);
+		padding: 16px;
 	}
 
 	.chat-page {
@@ -375,6 +420,7 @@
 		box-sizing: border-box;
 
 		overflow: auto;
+
 		scrollbar-width: none;
 	}
 
@@ -403,7 +449,6 @@
 
 	.playground-view {
 		display: grid;
-		grid-template-rows: 48px 1fr 120px;
 
 		gap: 8px;
 		min-width: 360px;

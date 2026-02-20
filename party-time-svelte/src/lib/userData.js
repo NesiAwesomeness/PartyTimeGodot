@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 
 export const userStore = writable({
-	uid: "", username: ""
+	uid: "", username: "",
+	lastCheckedRequests: 0.0
 });

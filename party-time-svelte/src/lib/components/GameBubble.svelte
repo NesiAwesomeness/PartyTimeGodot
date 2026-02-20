@@ -62,7 +62,9 @@
 		>
 		<div class="game-title">
 			<span class="game-name">{gameData.name}</span>
-			<span class="game-round">Round 1</span>
+			{#if gameData.isRoundPlay}
+				<span class="game-round">Round {gameData.round}</span>
+			{/if}
 		</div>
 	</div>
 </button>

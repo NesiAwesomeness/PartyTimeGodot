@@ -2,9 +2,13 @@
 	import { slide } from 'svelte/transition';
 
 	export let src;
+	//this is the highlight source
+	export let hSrc;
+
 	export let alt;
 	export let label = 'BallSack';
 	export let enabled = true;
+	export let highlight = false;
 
 	let isHovered = false;
 </script>

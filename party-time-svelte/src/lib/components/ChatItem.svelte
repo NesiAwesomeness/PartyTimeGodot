@@ -1,9 +1,10 @@
 <script>
-	import { rtdb } from '$lib/firebase';
+	import { db, rtdb } from '$lib/firebase';
 	import { userStore } from '$lib/userData';
-	import { getDisplayTime, currentChat } from '$lib/appData';
+	import { getDisplayTime, currentChat, playgrounds } from '$lib/appData';
 	import { onValue, ref } from 'firebase/database';
 	import { onDestroy, onMount } from 'svelte';
+	import { doc, updateDoc } from 'firebase/firestore';
 
 	export let chatItem = {
 		id: 'z',
@@ -11,6 +12,7 @@
 	};
 
 	$: timestamp = getDisplayTime(chatItem.timestamp);
+	$: unopened = chatItem.timestamp > chatItem.lastOpened && chatItem.id != $currentChat.id;
 
 	let currentUnsubscribe = null;
 
@@ -27,6 +29,8 @@
 
 		const chatRef = ref(rtdb, `chats/${chatItem.id}`);
 		currentUnsubscribe = onValue(chatRef, (snapshot) => {
+			let newTimestamp = chatItem.timestamp;
+
 			if (snapshot.exists()) {
 				const chatData = snapshot.val();
 
@@ -39,16 +43,42 @@
 						return { id: key, ...value };
 					});
 
-				// update timestamp here.
-				console.log();
+				gameArray.sort((a, b) => b.timestamp - a.timestamp);
+
+				const latestGame = gameArray.reduce(
+					(max, game) => (game.timestamp > max.timestamp ? game : max),
+					{ timestamp: chatItem.timestamp || 0 }
+				);
+
+				newTimestamp = latestGame.timestamp;
+
+				if (newTimestamp > chatItem.timestamp) {
+					chatItem.timestamp = newTimestamp;
+					updateTimestamp(newTimestamp);
+				}
 			}
 
 			if ($currentChat.id === chatItem.id) {
-				// console.log('Games Updated ', chatItem.chatName, 'on this account ', $userStore.username);
-				$currentChat.gameArray = gameArray;
+				selectChat();
 			}
 		});
 	});
+
+	async function updateTimestamp(time) {
+		const playgroundRef = doc(db, 'users', $userStore.uid, 'playgrounds', chatItem.id);
+		await updateDoc(playgroundRef, {
+			timestamp: time
+		});
+	}
+
+	async function selectChat() {
+		$currentChat = { ...$currentChat, ...chatItem, gameArray, playerIndex, members };
+		const playgroundRef = doc(db, 'users', $userStore.uid, 'playgrounds', chatItem.id);
+
+		await updateDoc(playgroundRef, {
+			lastOpened: Date.now()
+		});
+	}
 
 	onDestroy(() => {
 		if (currentUnsubscribe) {
@@ -62,16 +92,21 @@
 	class="chat"
 	on:click={() => {
 		if (chatItem.id != $currentChat.id) {
-			$currentChat = { ...$currentChat, ...chatItem, gameArray, playerIndex, members };
-			// update lastOpened here.
+			selectChat();
 		}
 	}}
 >
 	<div class="icon-placeholder"></div>
-	<div class="chat-info">
+	<div
+		class="chat-info"
+		style="
+		font-weight: {unopened ? 800 : 500};"
+	>
 		<span class="username">{chatItem.chatName}</span>
-		<span class="timestamp">{timestamp}</span>
-		<span class="game-type">
+		<span class="timestamp" style="color: {unopened ? '#ffffff' : 'rgba(255, 255, 255, 0.32)'};"
+			>{timestamp}</span
+		>
+		<span class="game-type" style="color: {unopened ? '#ffffff' : 'rgba(255, 255, 255, 0.32)'};">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 12 12"
@@ -84,6 +119,7 @@
 			>
 				<circle cx="6" cy="6" r="5"></circle>
 			</svg>
+
 			Color Game
 		</span>
 	</div>
@@ -101,13 +137,14 @@
 		font-weight: 500;
 		cursor: pointer;
 
+		width: 100%;
+
 		overflow: hidden;
 		border-radius: 16px;
 	}
 
 	.username {
 		font-size: 1.125rem;
-
 		align-self: flex-start;
 	}
 
@@ -136,7 +173,6 @@
 		padding: 4px 8px;
 		border-radius: 8px;
 
-		color: rgba(255, 255, 255, 0.32);
 		background-color: rgba(22, 22, 22, 0.4);
 		margin: 0;
 	}
@@ -147,7 +183,6 @@
 		padding-right: 24px;
 
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.4);
 	}
 
 	.icon-placeholder {
