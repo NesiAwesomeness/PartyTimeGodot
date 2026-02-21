@@ -4,27 +4,37 @@
 	import { onMount } from 'svelte';
 	import { auth, db, rtdb } from '$lib/firebase';
 	import { onAuthStateChanged } from 'firebase/auth';
-	import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+	import { addDoc, collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 	import { userStore } from '$lib/userData';
 	import { goto } from '$app/navigation';
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
 			if (user) {
-				// User is logged in to Firebase Auth. Fetch their Firestore profile.
 				const userDocRef = doc(db, 'users', user.uid);
 				const userSnapshot = await getDoc(userDocRef);
 
 				if (userSnapshot.exists()) {
+					// Existing User: Update the store
 					$userStore = {
 						uid: user.uid,
 						...userSnapshot.data()
 					};
-
-					goto('/chat');
 				} else {
-					// this new user...
+					const newUserProfile = {
+						username: user.email.split('@')[0],
+						lastCheckedRequests: 0.0,
+						active: true
+					};
+					await setDoc(userDocRef, newUserProfile);
+
+					$userStore = {
+						uid: user.uid,
+						...newUserProfile
+					};
 				}
+
+				goto('/chat');
 			} else {
 			}
 		});

@@ -5,7 +5,6 @@
 	import { userStore } from '$lib/userData';
 	import { playgrounds, currentChat } from '$lib/appData';
 
-	let username;
 	let password;
 	let isLoading = false;
 
@@ -13,7 +12,7 @@
 		isLoading = true;
 
 		event.preventDefault();
-		signInWithEmailAndPassword(auth, `${username}@partytime.test`, password)
+		signInWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
 			.then((userCredential) => {})
 			.catch((error) => {
 				const errorCode = error.code;
@@ -24,11 +23,11 @@
 			});
 	}
 
-	function haldleRegister(event) {
+	function handleRegister(event) {
 		isLoading = true;
 
 		event.preventDefault();
-		createUserWithEmailAndPassword(auth, `${username}@partytime.test`, password)
+		createUserWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
 			.then((userCredential) => {})
 			.catch((error) => {
 				const errorCode = error.code;
@@ -53,7 +52,7 @@
 					type="text"
 					name="username"
 					placeholder="Username"
-					bind:value={username}
+					bind:value={$userStore.username}
 					autocomplete="username"
 					required
 				/>
@@ -69,7 +68,7 @@
 					<button type="submit" onclick={handleLogin} disabled={isLoading}>
 						{isLoading ? 'Wait...' : 'Sign In'}</button
 					>
-					<button type="button" onclick={haldleRegister} disabled={isLoading}> Register </button>
+					<button type="button" onclick={handleRegister} disabled={isLoading}> Register </button>
 				</div>
 			</form>
 		</div>

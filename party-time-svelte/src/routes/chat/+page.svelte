@@ -16,12 +16,9 @@
 	import RevealButton from '$lib/components/RevealButton.svelte';
 	import Request from '$lib/components/Request.svelte';
 
-	let loading = true;
-	let username = 'Username';
-
 	import { goto } from '$app/navigation';
 	import { auth, db } from '$lib/firebase';
-	import { collection, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
+	import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 
 	$: if ($userStore && $userStore.uid) {
 		fetchPlaygroundData($userStore.uid);
@@ -29,6 +26,9 @@
 	} else {
 		stopListening();
 	}
+
+	let loading = true;
+	let username = 'Username';
 
 	let newRequest = false;
 	let requestUnsub = null;
@@ -123,11 +123,11 @@
 		try {
 			// 2. Query the 'users' collection where username == friendUsername
 			const usersRef = collection(db, 'users');
-			const q = query(usersRef, where('username', '==', friendUsername));
+			const q = query(usersRef, where('username', '==', searchName));
 
 			const querySnapshot = await getDocs(q);
 
-			friendSearchText = '';
+			searchName = '';
 			isSearching = false;
 
 			if (querySnapshot.empty) {
@@ -144,7 +144,7 @@
 				timestamp: Date.now()
 			});
 
-			console.log('Request sent successfully to', searchedName);
+			console.log('Request sent successfully to', searchName);
 		} catch (error) {
 			console.error('Error sending request:', error);
 			isSearching = false;
