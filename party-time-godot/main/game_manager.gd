@@ -2,7 +2,6 @@ extends Node
 class_name GameManager
 
 const color_game_scene = preload("res://main/games/color_game/color_game.tscn")
-
 var web_callback_ref
 
 #this only works in Web Builds
@@ -13,12 +12,29 @@ func _ready():
 
 func godot_callback(args):
 	var function_name = args[0]
-	var json_string = args[1]
+	var data = args[1]
 	
-	var data_dict : Dictionary = JSON.parse_string(json_string)
+	var parsed_data
 	
-	call(function_name, data_dict)
-	send_data(function_name, data_dict )
+	if data is String:
+		parsed_data = JSON.parse_string(data)
+	else:
+		parsed_data = data
+	
+	match function_name:
+		"setup_network":
+			MultiplayerManager.setup_network(parsed_data.id)
+			return
+		"handle_webrtc_signal":
+			MultiplayerManager.handle_webrtc_signal(parsed_data)
+			return
+		"update_active_players":
+			MultiplayerManager.update_active_players(parsed_data)
+			return
+	
+	if parsed_data is Dictionary:
+		call(function_name, parsed_data )
+		send_data(function_name, parsed_data )
 
 func start_game(game : Dictionary):
 	if not game.has("gameData"):
@@ -27,7 +43,6 @@ func start_game(game : Dictionary):
 	
 	var game_data = game.gameData
 	if game_data.key == "" : return
-	print(game_data.key)
 	
 	match game_data.key:
 		"ColorGame":
@@ -44,10 +59,15 @@ func send_game(_data):
 
 func on_game_close(_b):
 	#chill for half a second before deleting.
-	create_tween().tween_callback( get_tree().call_group.bind("GameScene", "queue_free") ).set_delay(0.5)
+	MultiplayerManager.close_game()
+	create_tween().tween_callback( get_tree().call_group.bind( "GameScene", "queue_free" ) ).set_delay( 0.16 )
 
 static func send_data(message_name: String, payload : Dictionary):
 	var message_data = {"message": message_name, "data": payload }
 	var json_string = JSON.stringify(message_data)
 	var js_code = "window.parent.postMessage(%s, '*');" % json_string
 	JavaScriptBridge.eval(js_code)
+
+static func send_webrtc_signal(payload: Dictionary):
+	var json_string = JSON.stringify(payload)
+	JavaScriptBridge.eval("window.parent.postMessage({type: 'GODOT_SIGNAL', data: %s}, '*');" % json_string)

@@ -1,22 +1,167 @@
 <script>
 	import { currentGame, currentChat } from '$lib/appData';
 	import { rtdb } from '$lib/firebase';
-	import { ref, update } from 'firebase/database';
+	import { userStore } from '$lib/userData';
+	import {
+		get,
+		onDisconnect,
+		onValue,
+		push,
+		ref,
+		remove,
+		runTransaction,
+		set,
+		update
+	} from 'firebase/database';
 
 	let isLoaded = false;
 	let iframeGodot;
+
 	export let isGameOpen = false;
 	let lastUpdated = 0.0;
+	let myGodotId = 0;
+
+	let sessionRef;
+	let playersUnsub;
+	let signalingUnsub;
 
 	$: if (isGameOpen) {
 		gameUpdate('start_game');
+		joinSession();
+	} else {
+		leaveSession();
 	}
 
-	//if any of the games change, this should run
+	//if the game changes change, this should run
 	$: if ($currentGame) {
 		gameUpdate('update_game');
 	}
 
+	console.log(isGameOpen && isLoaded);
+
+	async function joinSession() {
+		console.log('hmmm');
+		if (!$userStore.uid) return;
+
+		const playersRef = ref(
+			rtdb,
+			`chats/${$currentChat.id}/games/${$currentGame.id}/active_players`
+		);
+
+		// --- THE TRANSACTION (The "Ticket Booth") ---
+		// This prevents two people from grabbing "Player 1" simultaneously
+		const result = await runTransaction(playersRef, (currentData) => {
+			if (currentData === null) {
+				// Room is empty? Create it with me in slot 1
+				return { '1': $userStore.uid };
+			}
+
+			// Room exists. Find first empty slot (1 to 32)
+			for (let i = 1; i <= 32; i++) {
+				const slotKey = i.toString();
+				if (!currentData.hasOwnProperty(slotKey)) {
+					// Found empty slot! Sit here.
+					currentData[slotKey] = $userStore.uid;
+					return currentData;
+				}
+				// Edge case: Am I already in here? (Page reload)
+				if (currentData[slotKey] === $userStore.uid) {
+					return undefined; // Abort transaction, I'm already in
+				}
+			}
+
+			// Room is full (optional handling)
+			return currentData;
+		});
+
+		if (result.committed) {
+			const data = result.snapshot.val();
+			const mySlot = Object.keys(data).find((key) => data[key] === $userStore.uid);
+
+			if (mySlot) {
+				myGodotId = parseInt(mySlot);
+				console.log(`I have acquired Player ID: ${myGodotId}`);
+
+				// 1. Set up Disconnect (If I close tab, free up my chair)
+				sessionRef = ref(
+					rtdb,
+					`chats/${$currentChat.id}/games/${$currentGame.id}/active_players/${myGodotId}`
+				);
+				onDisconnect(sessionRef).remove();
+				setupGodotAndListeners();
+			}
+		} else {
+			const snapshot = await get(playersRef);
+			const data = snapshot.val();
+			if (data) {
+				const mySlot = Object.keys(data).find((key) => data[key] === $userStore.uid);
+				if (mySlot) {
+					myGodotId = parseInt(mySlot);
+					setupGodotAndListeners();
+				}
+			}
+		}
+	}
+
+	function setupGodotAndListeners() {
+		// Tell Godot: "I am Player [myGodotId]"
+		pushGodot('setup_network', { id: myGodotId });
+
+		// Listen for other players
+		const allPlayersRef = ref(
+			rtdb,
+			`chats/${$currentChat.id}/games/${$currentGame.id}/active_players`
+		);
+		playersUnsub = onValue(allPlayersRef, (snapshot) => {
+			const players = snapshot.val();
+			if (players) {
+				const playerIds = Object.keys(players).map(Number);
+				pushGodot('update_active_players', playerIds);
+			} else {
+				pushGodot('update_active_players', []);
+			}
+		});
+
+		listenToSignaling();
+	}
+
+	function leaveSession() {
+		if (myGodotId === 0) return;
+
+		// Remove myself from the chair
+		if (sessionRef) {
+			remove(sessionRef);
+			onDisconnect(sessionRef).cancel();
+		}
+
+		if (playersUnsub) playersUnsub();
+		if (signalingUnsub) signalingUnsub();
+
+		myGodotId = 0;
+	}
+
+	function listenToSignaling() {
+		const signalRef = ref(
+			rtdb,
+			`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${myGodotId}`
+		);
+		signalingUnsub = onValue(signalRef, (snapshot) => {
+			const data = snapshot.val();
+			if (data) {
+				Object.entries(data).forEach(([key, msg]) => {
+					pushGodot('handle_webrtc_signal', msg);
+					remove(
+						ref(
+							rtdb,
+							`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${myGodotId}/${key}`
+						)
+					);
+				});
+			}
+		});
+	}
+
+	// FIREBASE TO GODOT
 	function gameUpdate(functionName) {
 		let members = {};
 
@@ -35,16 +180,7 @@
 		});
 	}
 
-	export let rect = {
-		x: 0.0,
-		y: 0.0,
-		h: 1.0,
-		w: 1.0,
-		o: 0.0,
-		r: 0.0
-	};
-
-	// sending to Godot
+	// SVELTE TO GODOT
 	function pushGodot(functionName, data) {
 		const jsonString = JSON.stringify(data);
 		if (iframeGodot && iframeGodot.contentWindow && iframeGodot.contentWindow.sendToGodot) {
@@ -52,39 +188,45 @@
 		}
 	}
 
-	function sendGame() {
-		pushGodot('send_game', { timestamp: Date.now() });
-	}
-
-	// receiving from Godot.
+	// GODOT TO SVELTE
 	function pullGodot(event) {
-		if (!event.data || !event.data.message) return;
+		if (!isGameOpen) return;
+		if (!event.data) return;
+
+		if (event.data && event.data.type === 'GODOT_SIGNAL') {
+			const { target, payload } = event.data.data;
+			const targetRef = ref(
+				rtdb,
+				`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${target}`
+			);
+			push(targetRef, {
+				source_id: myGodotId,
+				payload: payload
+			});
+			return;
+		}
+
+		if (!event.data.message) return;
+
 		const message = event.data.message;
 		const payload = event.data.data;
 
-		console.log(event.data.message);
+		// console.log(event.data.message);
 
 		switch (message) {
 			case 'upload':
-				uploadGame(payload);
+				saveGame(payload);
 		}
-
-		// console.log(`Svelte received message: ${message}`, payload);
 	}
 
-	async function uploadGame(data) {
+	// SVELTE to FIREBASE
+	async function saveGame(data) {
 		let dataToSave = { ...data };
-
-		// console.log(dataToSave, 'data');
 		dataToSave.timestamp = Date.now();
 
 		try {
-			// Point directly to the specific game inside the chat
 			const gameRef = ref(rtdb, `chats/${$currentChat.id}/games/${dataToSave.id}`);
-
 			await update(gameRef, dataToSave);
-
-			// console.log('Game turn advanced successfully!');
 		} catch (error) {
 			console.error('Failed to update game:', error);
 		}
@@ -94,8 +236,25 @@
 		pushGodot('on_game_close', {});
 	}
 
-	import { createEventDispatcher } from 'svelte';
+	function sendGame() {
+		pushGodot('send_game', { timestamp: Date.now() });
+	}
+
+	onDestroy(() => {
+		leaveSession();
+	});
+
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
+
+	export let rect = {
+		x: 0.0,
+		y: 0.0,
+		h: 1.0,
+		w: 1.0,
+		o: 0.0,
+		r: 0.0
+	};
 </script>
 
 <svelte:window on:message={pullGodot} />
