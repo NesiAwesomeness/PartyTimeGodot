@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://ixl1ea78vhl0"]
+
+[ext_resource type="Script" uid="uid://xr6u0of0bscq" path="res://main/games/go-fish/hand.gd" id="1_unbw3"]
+
+[node name="Hand" type="Control" unique_id=818162089]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_unbw3")

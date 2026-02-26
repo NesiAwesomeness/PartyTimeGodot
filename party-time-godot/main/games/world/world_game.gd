@@ -36,7 +36,7 @@ func remove_player(id):
 
 var save_timer = 0.0
 func _process(delta):
-	# Only the Cloud Master runs this logic
+	# only the Cloud Master runs this logic
 	if not multiplayer.multiplayer_peer: return
 	if MultiplayerManager.cloud_master_id != multiplayer.get_unique_id():
 		return
@@ -61,6 +61,7 @@ func save_players():
 			}
 	
 	if not positions.is_empty():
+		#game state
 		var payload = {
 			"positions" : positions
 		}

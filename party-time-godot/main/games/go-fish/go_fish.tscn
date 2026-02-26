@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://h5fekp4xhdh1"]
+
+[ext_resource type="Script" uid="uid://1bk7l0mcqpwb" path="res://main/games/go-fish/go_fish.gd" id="1_6o1i6"]
+[ext_resource type="PackedScene" uid="uid://ixl1ea78vhl0" path="res://main/games/go-fish/hand.tscn" id="2_rcvgb"]
+
+[node name="GoFish" type="Node" unique_id=1464147714]
+script = ExtResource("1_6o1i6")
+player_scene = ExtResource("2_rcvgb")

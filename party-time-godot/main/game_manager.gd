@@ -1,7 +1,7 @@
 extends Node
 class_name GameManager
 
-const color_game_scene = preload("res://main/games/color_game/color_game.tscn")
+const color_game_scene = preload("res://main/games/color-game/color_game.tscn")
 const world_game_scene = preload("res://main/games/world/world_game.tscn")
 
 static var my_uid = ''
