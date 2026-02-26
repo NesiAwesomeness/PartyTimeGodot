@@ -4,21 +4,33 @@
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/userData';
 	import { playgrounds, currentChat } from '$lib/appData';
+	import Loader from '$lib/components/Loader.svelte';
+	import { toast } from 'svelte-sonner';
+	import Modal from '$lib/components/Modal.svelte';
+	import EyeOpen from '$lib/components/EyeOpen.svelte';
+	import EyeClosed from '$lib/components/EyeClosed.svelte';
 
 	let password;
 	let isLoading = false;
+	let isSignin = true;
+	let passwordSeen = false;
 
 	function handleLogin(event) {
 		isLoading = true;
 
 		event.preventDefault();
 		signInWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
-			.then((userCredential) => {})
+			.then((userCredential) => {
+				toast.success(`Welcome ${$userStore.username}!`);
+			})
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
+				if (errorMessage == 'Firebase: Error (auth/invalid-credential).') {
+					toast.error('Wrong Username or password :(');
+				}
 			})
-			.finally(() => {
+			.finally((e) => {
 				isLoading = false;
 			});
 	}
@@ -28,24 +40,32 @@
 
 		event.preventDefault();
 		createUserWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
-			.then((userCredential) => {})
+			.then((userCredential) => {
+				toast.success(`Welcome ${$userStore.username}!`);
+			})
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
 			})
-			.finally(() => {
+			.finally((e) => {
 				isLoading = false;
 			});
 	}
 </script>
 
 <div class="account-auth">
-	<div class="account-auth-spacer"></div>
+	<div class="account-auth-spacer">
+		<h1 class="game-title">PARTY TIME!</h1>
+	</div>
 	<div class="account-auth-form">
 		<div>
 			<div class="auth-title">
-				<h3>Sign In or Sign Up</h3>
-				<p>Play text message games with your friends</p>
+				{#if isSignin}
+					<h3 class="!text-3xl">Sign In</h3>
+				{:else}
+					<h3 class="!text-3xl">Sign Up</h3>
+				{/if}
+				<p class="text-base">Play text message games with your friends</p>
 			</div>
 			<form class="auth-form" onsubmit={handleLogin}>
 				<input
@@ -56,20 +76,74 @@
 					autocomplete="username"
 					required
 				/>
-				<input
-					type="password"
-					name="password"
-					placeholder="Password"
-					bind:value={password}
-					autocomplete="current-password"
-					required
-				/>
-				<div class="button-group">
-					<button type="submit" onclick={handleLogin} disabled={isLoading}>
-						{isLoading ? 'Wait...' : 'Sign In'}</button
-					>
-					<button type="button" onclick={handleRegister} disabled={isLoading}> Register </button>
+				<div class="relative">
+					<input
+						type={passwordSeen ? 'text' : 'password'}
+						name="password"
+						placeholder="Password"
+						bind:value={password}
+						autocomplete="current-password"
+						required
+					/>
+					{#if passwordSeen}
+						<EyeOpen
+							onClick={() => {
+								passwordSeen = false;
+							}}
+							class="absolute center-y right-4 size-[17px] cursor-pointer"
+						/>
+					{:else}
+						<EyeClosed
+							onClick={() => {
+								passwordSeen = true;
+							}}
+							class="absolute center-y right-4 size-[17px] cursor-pointer"
+						/>
+					{/if}
 				</div>
+				<div class="button-group">
+					{#if isSignin}
+						<button type="submit" onclick={handleLogin} disabled={isLoading}>
+							{#if isLoading}
+								<div class="flex justify-center items-center">
+									<Loader size={20} />
+								</div>
+							{:else}
+								Sign In
+							{/if}
+						</button>
+					{:else}
+						<button type="button" onclick={handleRegister} disabled={isLoading}>
+							{#if isLoading}
+								<div class="flex justify-center items-center">
+									<Loader size={20} />
+								</div>
+							{:else}
+								Register
+							{/if}
+						</button>
+					{/if}
+				</div>
+
+				<p class="text-sm italic text-white/50 mt-[-8px] ml-[6px]">
+					{#if isSignin}
+						New here? <button
+							onclick={(e) => {
+								e.preventDefault();
+								isSignin = !isSignin;
+							}}
+							class="underline cursor-pointer inline">Create an account</button
+						>
+					{:else}
+						Have an account? <button
+							onclick={(e) => {
+								e.preventDefault();
+								isSignin = !isSignin;
+							}}
+							class="underline cursor-pointer inline">Sign in</button
+						>
+					{/if}
+				</p>
 			</form>
 		</div>
 	</div>
@@ -177,5 +251,19 @@
 		.button-group {
 			grid-auto-flow: row;
 		}
+	}
+
+	.game-title {
+		font-size: 8em;
+		height: 100%;
+		margin: 0;
+		width: 100%;
+		color: white;
+		/* margin-inline: auto; */
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		text-align: center;
+		line-height: 100%;
 	}
 </style>

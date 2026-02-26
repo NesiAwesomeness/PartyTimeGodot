@@ -33,6 +33,7 @@
 	let newRequest = false;
 	let requestUnsub = null;
 	let playgroundUnsub = null;
+	let modalOpen = false;
 
 	function stopListening() {
 		if (requestUnsub) {
@@ -229,6 +230,8 @@
 	}
 
 	import { signOut } from 'firebase/auth';
+	import Modal from '$lib/components/Modal.svelte';
+	import Loader from '$lib/components/Loader.svelte';
 
 	async function handleLogOut() {
 		try {
@@ -245,9 +248,23 @@
 <GodotHolder rect={$holderBounds} {isGameOpen} on:click={closeGame} />
 
 <div class="chat-page">
+	<Modal bind:isOpen={modalOpen} class="flex justify-center items-center">
+		<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
+		<div class="flex justify-center items-center gap-[10px] mt-[30px]">
+			<button
+				on:click={() => {
+					modalOpen = false;
+				}}
+				class="px-[16px] py-[2px] rounded-full bg-[white] text-black">No</button
+			>
+			<button class="px-[16px] py-[2px] rounded-full bg-[#cb4444]" on:click={handleLogOut}
+				>Yes</button
+			>
+		</div>
+	</Modal>
 	<div class="chat-page-wrapper">
 		{#if $userStore.uid === ''}
-			<div style="color: white;">Loading app...</div>
+			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size = {100}/></div>
 		{:else}
 			<div class="chat-view">
 				<div class="friend-seek-wrapper box">
@@ -324,7 +341,12 @@
 				<div class="info panel box">
 					<div class="icon-placeholder"></div>
 					<p class="chat-title">{$userStore.username}</p>
-					<button class="sign-out" on:click={handleLogOut}>Sign out</button>
+					<button
+						class="sign-out"
+						on:click={() => {
+							modalOpen = true;
+						}}>Sign out</button
+					>
 				</div>
 			</div>
 			<div

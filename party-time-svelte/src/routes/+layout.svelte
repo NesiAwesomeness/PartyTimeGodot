@@ -1,12 +1,13 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
-
+	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 	import { auth, db, rtdb } from '$lib/firebase';
 	import { onAuthStateChanged } from 'firebase/auth';
 	import { addDoc, collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 	import { userStore } from '$lib/userData';
 	import { goto } from '$app/navigation';
+	import '../app.css';
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -49,6 +50,7 @@
 </svelte:head>
 
 {@render children()}
+<Toaster richColors/>
 
 <style>
 	:global(html),
