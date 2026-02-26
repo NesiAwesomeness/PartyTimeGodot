@@ -602,6 +602,7 @@
 
 		display: flex;
 		flex-direction: row;
+		gap: 8px;
 		padding: 8px;
 
 		box-sizing: border-box;

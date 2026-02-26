@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://bgvlenp5lvf0h"]
+
+[ext_resource type="Script" uid="uid://1fsx8top37t6" path="res://main/games/world/world_game.gd" id="1_sljs7"]
+
+[node name="World" type="Node2D" unique_id=597988097]
+script = ExtResource("1_sljs7")
+
+[node name="Players" type="Node2D" parent="." unique_id=45373093]
+
+[node name="Cam" type="Camera2D" parent="." unique_id=1608708416]

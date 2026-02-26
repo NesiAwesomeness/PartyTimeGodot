@@ -2,24 +2,76 @@ extends Node
 
 signal player_connected(peer_id)
 signal player_disconnected(peer_id)
+signal server_setup(peer_id)
 
 var multiplayer_peer : WebRTCMultiplayerPeer
+var peer_to_uid = {}
 var peers = {}
+
 var my_peer_id : int = 0
+var cloud_master_id : int = -1
 
 func setup_network(id: int):
 	my_peer_id = id
-	multiplayer_peer = WebRTCMultiplayerPeer.new()
 	
+	cloud_master_id = my_peer_id
+	peer_to_uid[id] = GameManager.my_uid
+	
+	multiplayer_peer = WebRTCMultiplayerPeer.new()
 	multiplayer_peer.create_mesh(my_peer_id)
 	multiplayer.multiplayer_peer = multiplayer_peer
 	
-	multiplayer.peer_connected.connect(func(i): player_connected.emit(i))
-	multiplayer.peer_disconnected.connect(func(i): player_disconnected.emit(i))
+	multiplayer.peer_connected.connect(
+		func(i):
+			rpc("add_uid", GameManager.my_uid)
+			
+			if cloud_master_id == multiplayer.get_unique_id():
+				#tell the new peer that I am the master.
+				rpc_id(i, "set_cloud_master", cloud_master_id)
+			player_connected.emit(i)
+	)
+	multiplayer.peer_disconnected.connect(
+		func(i): 
+			#if the master disconnects
+			if cloud_master_id == i:
+				elect_new_master()
+			player_disconnected.emit(i)
+	)
+	
+	server_setup.emit(id)
+
+@rpc("any_peer", "call_local", "reliable")
+func add_uid(incoming_uid):
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id == 0: sender_id = multiplayer.get_unique_id()
+	peer_to_uid[sender_id] = incoming_uid
+
+@rpc("any_peer", "call_remote", "reliable")
+func set_cloud_master(new_master_id):
+	if cloud_master_id == multiplayer.get_unique_id():
+		if new_master_id > my_peer_id: return
+	cloud_master_id = new_master_id
+	print("Acknowledged Master: ", cloud_master_id)
+
+func elect_new_master():
+	# Deterministic Election: Lowest Peer ID wins
+	var _peers = multiplayer.get_peers()
+	_peers.append(multiplayer.get_unique_id()) # Include self
+	_peers.sort() # Sorts lowest to highest.
+	
+	if _peers.size() > 0:
+		cloud_master_id = _peers[0]
+		if cloud_master_id == multiplayer.get_unique_id():
+			print("Look at me. I am the Captain now.")
 
 func update_active_players(active_ids: Array):
 	if my_peer_id == 0 : return
-	print(active_ids)
+	
+	if active_ids.size() == 1:
+		cloud_master_id = my_peer_id
+	
+	if multiplayer.has_multiplayer_peer():
+		peer_to_uid[multiplayer.get_unique_id()] = GameManager.my_uid
 	
 	var current_active_ids = []
 	for id in active_ids:
@@ -63,8 +115,6 @@ func _create_peer_connection(target_peer_id):
 	multiplayer_peer.add_peer(peer, target_peer_id)
 	peers[target_peer_id] = peer
 	
-	print("pearsss")
-	
 	if my_peer_id > target_peer_id:
 		peer.create_offer()
 
@@ -97,8 +147,6 @@ func handle_webrtc_signal(data: Dictionary):
 	
 	if not peers.has(source_id):
 		_create_peer_connection(source_id)
-	
-	print(data)
 	
 	var peer : WebRTCPeerConnection = peers[source_id]
 	

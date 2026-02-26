@@ -49,6 +49,17 @@ export const games = readable([
 		gameState: {
 			stateColor: '#ffffff'
 		}
+	},
+	{
+		...gameDataDefaults,
+		isTurnBased: false,
+		isRoundPlay: false,
+
+		name: "World Game",
+		key: "WorldGame",
+		gameState: {
+
+		}
 	}
 ])
 

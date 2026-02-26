@@ -2,9 +2,12 @@ extends Node
 class_name GameManager
 
 const color_game_scene = preload("res://main/games/color_game/color_game.tscn")
-var web_callback_ref
+const world_game_scene = preload("res://main/games/world/world_game.tscn")
+
+static var my_uid = ''
 
 #this only works in Web Builds
+var web_callback_ref
 func _ready():
 	web_callback_ref = JavaScriptBridge.create_callback(godot_callback)
 	var window = JavaScriptBridge.get_interface("window")
@@ -37,18 +40,24 @@ func godot_callback(args):
 		send_data(function_name, parsed_data )
 
 func start_game(game : Dictionary):
+	my_uid = game.chatData.myID
+	
 	if not game.has("gameData"):
-		print("No game data.")
+		print(" No game data. ")
 		return
 	
 	var game_data = game.gameData
 	if game_data.key == "" : return
 	
+	var game_scene : GameScene
+	
 	match game_data.key:
-		"ColorGame":
-			var color_game : GameScene = color_game_scene.instantiate()
-			add_child(color_game)
-			color_game.on_server_update(game)
+		"ColorGame" : game_scene = color_game_scene.instantiate()
+		"WorldGame" : game_scene = world_game_scene.instantiate()
+	
+	add_child(game_scene)
+	game_scene.add_to_group("GameScene")
+	game_scene.on_server_update(game)
 
 func update_game(data):
 	get_tree().call_group("GameScene", "on_server_update", data)
@@ -59,8 +68,9 @@ func send_game(_data):
 
 func on_game_close(_b):
 	#chill for half a second before deleting.
-	MultiplayerManager.close_game()
-	create_tween().tween_callback( get_tree().call_group.bind( "GameScene", "queue_free" ) ).set_delay( 0.16 )
+	create_tween().tween_callback( get_tree().call_group.bind( 
+		"GameScene", "queue_free" ) ).set_delay( 0.16 )
+	create_tween().tween_callback( MultiplayerManager.close_game ).set_delay( 0.16 )
 
 static func send_data(message_name: String, payload : Dictionary):
 	var message_data = {"message": message_name, "data": payload }

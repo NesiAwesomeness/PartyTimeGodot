@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://b3ft22ulsbaqf"]
+
+[ext_resource type="Script" uid="uid://botv3ltmowoby" path="res://main/games/world/player.gd" id="1_k527q"]
+[ext_resource type="Texture2D" uid="uid://bj68ptnw54eg6" path="res://icon.svg" id="1_u1tig"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_u1tig"]
+size = Vector2(64, 64)
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_k527q"]
+properties/0/path = NodePath(".:global_position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+
+[node name="Player" type="CharacterBody2D" unique_id=1475822302]
+collision_mask = 2
+script = ExtResource("1_k527q")
+
+[node name="HitBox" type="CollisionShape2D" parent="." unique_id=1339516207]
+shape = SubResource("RectangleShape2D_u1tig")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=473697013]
+position = Vector2(1.9073486e-06, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("1_u1tig")
+
+[node name="Sync" type="MultiplayerSynchronizer" parent="." unique_id=1659621497]
+replication_config = SubResource("SceneReplicationConfig_k527q")

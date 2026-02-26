@@ -26,8 +26,8 @@
 	let signalingUnsub;
 
 	$: if (isGameOpen) {
-		gameUpdate('start_game');
 		joinSession();
+		gameUpdate('start_game');
 	} else {
 		leaveSession();
 	}
@@ -175,7 +175,8 @@
 			chatData: {
 				playerIndex: $currentChat.playerIndex,
 				memberCount: memberIds.length,
-				members: $currentChat.members
+				members: $currentChat.members,
+				myID: $userStore.uid
 			}
 		});
 	}
@@ -211,11 +212,14 @@
 		const message = event.data.message;
 		const payload = event.data.data;
 
-		// console.log(event.data.message);
-
+		// FIX this ngl.
 		switch (message) {
 			case 'upload':
 				saveGame(payload);
+				break;
+			case 'batch_update':
+				saveGameState(payload);
+				break;
 		}
 	}
 
@@ -227,6 +231,29 @@
 		try {
 			const gameRef = ref(rtdb, `chats/${$currentChat.id}/games/${dataToSave.id}`);
 			await update(gameRef, dataToSave);
+		} catch (error) {
+			console.error('Failed to update game:', error);
+		}
+	}
+
+	async function saveGameState(payload) {
+		const updates = {};
+		const basePath = `chats/${$currentChat.id}/games/${$currentGame.id}/gameState`;
+
+		for (const [category, data] of Object.entries(payload)) {
+			if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+				for (const [key, innerValue] of Object.entries(data)) {
+					// Path: .../gameState/positions/u1
+					updates[`${basePath}/${category}/${key}`] = innerValue;
+				}
+			} else {
+				// It's a global variable or simple array
+				updates[`${basePath}/${category}`] = data;
+			}
+		}
+
+		try {
+			await update(ref(rtdb), updates);
 		} catch (error) {
 			console.error('Failed to update game:', error);
 		}

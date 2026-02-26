@@ -22,7 +22,7 @@ MultiplayerManager="*uid://mg0kamoxohuk"
 [display]
 
 window/size/viewport_width=1280
-window/size/viewport_height=1200
+window/size/viewport_height=1280
 
 [physics]
 
