@@ -17,7 +17,14 @@
 		}
 	}
 
-	$: fromYou = gameData.playerTurn != $currentChat.playerIndex;
+	$: isTurnBased = Object.keys(gameData.gameState).includes('playerTurn');
+	$: isRoundPlay = Object.keys(gameData.gameState).includes('round');
+
+	let fromYou = false;
+	$: if (isTurnBased) {
+		fromYou = gameData.gameState.playerTurn != $currentChat.playerIndex;
+	}
+
 	$: oppName = $currentChat.isGroup
 		? Object.values($currentChat.members)[gameData.playerTurn]
 		: 'Them';
@@ -25,7 +32,7 @@
 	$: timestamp = getDisplayTime(gameData.timestamp);
 
 	function setGame() {
-		$currentGame = { id, gameData };
+		$currentGame = { id, gameData, isTurnBased };
 	}
 
 	import { createEventDispatcher } from 'svelte';
@@ -62,8 +69,8 @@
 		>
 		<div class="game-title">
 			<span class="game-name">{gameData.name}</span>
-			{#if gameData.isRoundPlay}
-				<span class="game-round">Round {gameData.round}</span>
+			{#if isRoundPlay}
+				<span class="game-round">Round {gameData.gameState.round}</span>
 			{/if}
 		</div>
 	</div>
