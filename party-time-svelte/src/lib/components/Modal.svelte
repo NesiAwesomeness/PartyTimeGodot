@@ -7,6 +7,7 @@
 	// Props
 	export let isOpen = false;
 	let className = '';
+	export let onClose;
 	export { className as class };
 
 	function close() {
@@ -19,7 +20,10 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80"
-		on:click={close}
+		on:click={() => {
+			close();
+			onClose();
+		}}
 		transition:fade={{ duration: 200 }}
 	>
 		<div

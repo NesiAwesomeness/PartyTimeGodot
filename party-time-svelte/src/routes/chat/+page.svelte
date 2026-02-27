@@ -1,6 +1,6 @@
 <script>
 	import { userStore } from '$lib/userData';
-	import { playgrounds, currentChat, requests } from '$lib/appData';
+	import { playgrounds, currentChat, requests, requestsSent } from '$lib/appData';
 
 	import { onDestroy, onMount } from 'svelte';
 	import { games } from '$lib/appData';
@@ -34,6 +34,7 @@
 	let requestUnsub = null;
 	let playgroundUnsub = null;
 	let modalOpen = false;
+	let searchModal = false;
 
 	function stopListening() {
 		if (requestUnsub) {
@@ -75,6 +76,7 @@
 				);
 
 				newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
+				// Updates the requests received by the current user
 				$requests = tempItems;
 			});
 		}
@@ -114,12 +116,15 @@
 	let searchName = '';
 	let isSearching = false;
 	let requestList = false;
+	let requestsLoadingStates = [];
 
-	async function handleSendRequest() {
+	async function handleSendRequest(e, index) {
 		if (!searchName) return;
+		searchName = e.currentTarget.previousElementSibling.textContent;
 
 		isSearching = true;
-		console.log(searchName);
+		requestsLoadingStates[index] = true;
+		requestsLoadingStates = requestsLoadingStates;
 
 		try {
 			// 2. Query the 'users' collection where username == friendUsername
@@ -128,11 +133,14 @@
 
 			const querySnapshot = await getDocs(q);
 
-			searchName = '';
+			// searchName = '';
 			isSearching = false;
+			requestsLoadingStates[index] = false;
+			requestsLoadingStates = requestsLoadingStates;
 
 			if (querySnapshot.empty) {
 				console.log('User not found!');
+				toast.error('User not found');
 				return;
 			}
 
@@ -140,15 +148,23 @@
 			const friendId = friendDoc.id;
 			const requestRef = doc(db, 'users', friendId, 'requests', $userStore.uid);
 
+			// Updates the requests that have been sent by the current user
+			requestsSent.update((current) => {
+				return [...current, searchName];
+			});
+
 			await setDoc(requestRef, {
 				username: $userStore.username,
 				timestamp: Date.now()
 			});
 
 			console.log('Request sent successfully to', searchName);
+			toast.success(`Request sent successfully to ${searchName}`);
 		} catch (error) {
 			console.error('Error sending request:', error);
 			isSearching = false;
+			requestsLoadingStates[index] = false;
+			requestsLoadingStates = requestsLoadingStates;
 		}
 	}
 
@@ -232,6 +248,33 @@
 	import { signOut } from 'firebase/auth';
 	import Modal from '$lib/components/Modal.svelte';
 	import Loader from '$lib/components/Loader.svelte';
+	import { toast } from 'svelte-sonner';
+
+	let allUsers = [];
+	let friendsResult = [];
+	let isTypingSearch = false;
+
+	onMount(async () => {
+		const snapshot = await getDocs(collection(db, 'users'));
+		allUsers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	});
+
+	function handleFindFriend(e) {
+		const friend = e.currentTarget.value.toLowerCase();
+		if (friend !== '') {
+			isTypingSearch = true;
+		} else {
+			isTypingSearch = false;
+		}
+
+		const allChats = $playgrounds.map(({ chatName }) => chatName);
+
+		friendsResult = allUsers
+			.filter(({ username }) => username != $userStore.username)
+			.filter(({ username }) => !allChats.includes(username))
+			.filter(({ username }) => username.toLowerCase().includes(friend))
+			.map((friend) => friend.username);
+	}
 
 	async function handleLogOut() {
 		try {
@@ -263,14 +306,74 @@
 			>
 		</div>
 	</Modal>
+
+	<!-- Search Modal -->
+	<Modal
+		onClose={() => {
+			requestsLoadingStates = requestsLoadingStates.map((state) => (state = false));
+			searchName = '';
+			friendsResult = [];
+			isTypingSearch = false;
+		}}
+		bind:isOpen={searchModal}
+	>
+		<h3 class="mt-2 text-2xl">Find a friend</h3>
+		<!-- Container for searchbar and search icon -->
+		<div class="relative w-full bg-[#161616] rounded-md mt-4 px-5 py-3">
+			<img src={search} class="absolute center-y left-2 size-[14px]" alt="Search" />
+			<input
+				bind:value={searchName}
+				class="w-full focus:outline-none px-4"
+				name="search"
+				type="text"
+				disabled={isSearching}
+				placeholder="Search"
+				on:input={handleFindFriend}
+			/>
+		</div>
+
+		<!-- Container for search results -->
+		<div class="w-full min-h-[100px] mt-2">
+			{#if isTypingSearch}
+				{#if friendsResult.length != 0}
+					{#each friendsResult as friend, i}
+						<div
+							class="mt-2 rounded-sm flex justify-between items-center bg-[#161616]/70 py-2 px-4"
+						>
+							<p>{friend}</p>
+
+							{#if $requestsSent.includes(friend)}
+								<p class="text-sm text-white/60">Requested</p>
+							{:else}
+								<button
+									on:click={(e) => {
+										handleSendRequest(e, i);
+									}}
+									class="text-sm text-white/60"
+								>
+									{#if requestsLoadingStates[i]}
+										<Loader size={20} />
+									{:else}
+										Send request
+									{/if}</button
+								>
+							{/if}
+						</div>
+					{/each}
+				{:else}
+					<p class="text-white/60 text-sm italic">Cannot find {searchName} {':('}</p>
+				{/if}
+			{/if}
+		</div>
+	</Modal>
 	<div class="chat-page-wrapper">
 		{#if $userStore.uid === ''}
-			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size = {100}/></div>
+			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size={100} /></div>
 		{:else}
 			<div class="chat-view">
 				<div class="friend-seek-wrapper box">
 					<div class="friend-seek">
-						<img src={search} class="icon" alt="Search" />
+						<!-- <img src={search} class="icon" alt="Search" />
 						<input
 							bind:value={searchName}
 							class="search-bar"
@@ -278,7 +381,7 @@
 							type="text"
 							disabled={isSearching}
 							placeholder="Search"
-						/>
+						/> -->
 
 						{#if requestList}
 							<RevealButton
@@ -294,7 +397,9 @@
 								src={add}
 								alt="Add Friend"
 								label="Add Friend"
-								on:click={handleSendRequest}
+								on:click={() => {
+									searchModal = true;
+								}}
 							/>
 							<RevealButton
 								src={request}

@@ -2,6 +2,7 @@ import { readable, writable } from 'svelte/store';
 
 export const playgrounds = writable([]);
 export const requests = writable([]);
+export const requestsSent = writable([])
 
 export const currentChat = writable({
 	chatName: "Playground Name",
