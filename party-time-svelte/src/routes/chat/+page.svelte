@@ -288,7 +288,6 @@
 </script>
 
 <svelte:window on:resize={handleResize} />
-
 <GodotHolder rect={$holderBounds} {isGameOpen} on:click={closeGame} />
 
 <div class="chat-page">

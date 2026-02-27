@@ -18,6 +18,7 @@
 	let iframeGodot;
 
 	export let isGameOpen = false;
+
 	let lastUpdated = 0.0;
 	let myGodotId = 0;
 
@@ -171,7 +172,7 @@
 
 		const memberIds = Object.keys(members);
 		pushGodot(functionName, {
-			...$currentGame,
+			gameData: $currentGame.gameData,
 			chatData: {
 				playerIndex: $currentChat.playerIndex,
 				memberCount: memberIds.length,
@@ -326,7 +327,7 @@
 				/>
 			</svg>
 		</button>
-		{#if $currentGame.gameData.isTurnBased}
+		{#if $currentGame.isTurnBased}
 			<button title="Send Game" style="background-color: cadetblue;" on:click={sendGame}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

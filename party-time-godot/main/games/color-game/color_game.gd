@@ -31,17 +31,11 @@ func _on_server_update(_game_data : Dictionary, _chat_data : Dictionary, _game_s
 func on_user_send():
 	print("user send landed in Godot")
 	#change the playerTurn
-	if game_data["isTurnBased"]:
-		if game_data["playerTurn"] != chat_data["playerIndex"] : return #not your turn yet.
-		game_data["playerTurn"] = wrapi(chat_data["playerIndex"] + 1, 0, int(chat_data["memberCount"]))
-		print("turn has been updated")
+	if game_state["playerTurn"] != chat_data["playerIndex"] : return #not your turn yet.
+	game_state["playerTurn"] = wrapi(chat_data["playerIndex"] + 1, 0, int(chat_data["memberCount"]))
+	print("turn has been updated")
 	
 	game_state["stateColor"] = color.color.to_html(false)
-	game_data["gameState"] = game_state
+	game_state['round'] += int(game_state["playerTurn"] < chat_data["playerIndex"])
 	
-	#increase the round
-	if game_data["isRoundPlay"]:
-		#it has gone round, I guess.
-		game_data['round'] += int(game_data["playerTurn"] < chat_data["playerIndex"])
-	
-	GameManager.send_data("upload", game_data)
+	GameManager.send_data("update", game_state)

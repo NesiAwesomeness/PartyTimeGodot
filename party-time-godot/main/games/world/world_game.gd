@@ -6,14 +6,11 @@ const PLAYER_SCENE = preload("res://main/games/world/player.tscn")
 func _ready():
 	multiplayer.peer_connected.connect(spawn_player)
 	multiplayer.peer_disconnected.connect(remove_player)
-	
 	MultiplayerManager.server_setup.connect(on_server_setup)
 
 func on_server_setup(id):
 	spawn_player(id)
-	
 	for peer_id in multiplayer.get_peers():
-		print("Attempt to spawn player ", peer_id)
 		spawn_player(peer_id)
 
 func spawn_player(id):
@@ -32,17 +29,14 @@ func spawn_player(id):
 		
 		var saved_pos = initial_positions[uid]
 		player.global_position = Vector2(saved_pos.x, saved_pos.y)
-	
-	print("Just spawned a player")
 
 func remove_player(id):
 	if players_node.has_node(str(id)):
 		players_node.get_node(str(id)).queue_free()
 
 var save_timer = 0.0
-
 func _process(delta):
-	# Only the Cloud Master runs this logic
+	# only the Cloud Master runs this logic
 	if not multiplayer.multiplayer_peer: return
 	if MultiplayerManager.cloud_master_id != multiplayer.get_unique_id():
 		return
@@ -50,10 +44,9 @@ func _process(delta):
 	save_timer += delta
 	if save_timer > 1.8:
 		save_timer = 0.0
-		print("Attempting to save positions as the master.")
-		save_all_positions()
+		save_players()
 
-func save_all_positions():
+func save_players():
 	var positions = {}
 	
 	for peer_id in MultiplayerManager.peer_to_uid:
@@ -68,9 +61,9 @@ func save_all_positions():
 			}
 	
 	if not positions.is_empty():
+		#game state
 		var payload = {
 			"positions" : positions
 		}
 		
-		print("sending game state : ", payload)
 		GameManager.send_data("batch_update", payload)
