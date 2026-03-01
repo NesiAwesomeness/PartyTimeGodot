@@ -20,7 +20,7 @@ shadow_size = 8
 script = ExtResource("1_6o1i6")
 hand_scene = ExtResource("2_rcvgb")
 players_node = NodePath("CenterContainer/Opps")
-my_hand_node = NodePath("Me/Hand")
+my_hand_node = NodePath("Me/VBoxContainer/Hand")
 ask_panel = NodePath("AskPanel/Container/PanelContainer")
 player_name_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/PlayerName")
 request_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/Sentence")
@@ -91,20 +91,23 @@ offset_bottom = -114.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="Hand" parent="Me" unique_id=913138055 instance=ExtResource("2_rcvgb")]
+[node name="VBoxContainer" type="VBoxContainer" parent="Me" unique_id=574031189]
+layout_mode = 2
+
+[node name="PowerUps" type="HBoxContainer" parent="Me/VBoxContainer" unique_id=919488093]
+layout_mode = 2
+
+[node name="Hand" parent="Me/VBoxContainer" unique_id=913138055 instance=ExtResource("2_rcvgb")]
 layout_mode = 2
 is_me = true
 
-[node name="Hand" parent="Me/Hand/Margin" parent_id_path=PackedInt32Array(913138055, 1807607364) index="0" unique_id=282532123]
-theme_override_constants/separation = -36
-
-[node name="Label" parent="Me/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="0" unique_id=761011171]
+[node name="Label" parent="Me/VBoxContainer/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="0" unique_id=761011171]
 visible = false
 
-[node name="Score" parent="Me/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="1" unique_id=414416212]
+[node name="Score" parent="Me/VBoxContainer/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="1" unique_id=414416212]
 visible = false
 
-[node name="Button" parent="Me/Hand" index="2" unique_id=316015903]
+[node name="Button" parent="Me/VBoxContainer/Hand" index="2" unique_id=316015903]
 visible = false
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=12555329]
@@ -130,4 +133,4 @@ text = "Your turn"
 
 [connection signal="pressed" from="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/SendButton/Button" to="." method="on_send_ask_pressed"]
 
-[editable path="Me/Hand"]
+[editable path="Me/VBoxContainer/Hand"]

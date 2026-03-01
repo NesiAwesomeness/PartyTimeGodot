@@ -106,11 +106,12 @@ func on_set_up():
 			hand_node.hand_name = GameManager.chat_data.members[uid]
 			
 			players_node.add_child(hand_node)
+			#this means the card won't animate at the start.
 			hand_node.update_hand( hand )
 			hand_node.update_score( score )
 			continue
 		
-		my_hand_node.update_hand( hand )
+		my_hand_node.update_hand( hand, true )
 		my_hand_node.update_score( score )
 
 func on_game_state_update(_game_state):

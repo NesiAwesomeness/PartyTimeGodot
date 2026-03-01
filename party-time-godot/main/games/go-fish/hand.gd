@@ -25,7 +25,7 @@ func _ready():
 func update_score(score):
 	score_tag.text = str(int(score)) 
 
-func update_hand(new_hand : Array):
+func update_hand(new_hand : Array, from_set_up = false):
 	if not score_tag.visible:
 		score_tag.show()
 	
@@ -35,7 +35,6 @@ func update_hand(new_hand : Array):
 	for card in cards_to_add:
 		if hand.size() > 3 and not is_me:
 			summary.show()
-			summary.move_to_front()
 			summary_label.text = str("+",new_hand.size()-3)
 			continue
 		
@@ -43,11 +42,14 @@ func update_hand(new_hand : Array):
 		summary.hide()
 		
 		var card_name = String(card.rank) if is_me else String(card.suite + card.rank)
-		if hand_container.has_node(card_name): 
-			hand_container.get_node(card_name).add_to_count()
+		if hand_container.has_node(card_name):
+			var _card_node : Card = hand_container.get_node(card_name)
+			_card_node.animate = not from_set_up and is_me
+			_card_node.add_to_count()
 			continue
 		
 		var card_node : Card = card_scene.instantiate()
+		card_node.animate = not from_set_up and is_me
 		card_node.name = card_name
 		
 		hand_container.add_child(card_node)
