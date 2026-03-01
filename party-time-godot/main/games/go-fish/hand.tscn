@@ -2,9 +2,11 @@
 
 [ext_resource type="Script" uid="uid://xr6u0of0bscq" path="res://main/games/go-fish/hand.gd" id="1_unbw3"]
 [ext_resource type="PackedScene" uid="uid://bv4xcvounx4ie" path="res://main/games/go-fish/card.tscn" id="2_li78n"]
+[ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="3_nx0ho"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_li78n"]
-font_size = 20
+font = ExtResource("3_nx0ho")
+font_size = 24
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_li78n"]
 bg_color = Color(1, 1, 1, 1)
@@ -17,7 +19,7 @@ expand_margin_right = 16.0
 shadow_color = Color(0, 0, 0, 0.0627451)
 shadow_size = 8
 
-[node name="Hand" type="PanelContainer" unique_id=1093053303 node_paths=PackedStringArray("hand_container", "name_tag", "score_tag", "button")]
+[node name="Hand" type="PanelContainer" unique_id=1093053303 node_paths=PackedStringArray("hand_container", "name_tag", "score_tag", "button", "summary", "summary_label")]
 self_modulate = Color(1, 1, 1, 0)
 offset_right = 40.0
 offset_bottom = 40.0
@@ -27,6 +29,8 @@ hand_container = NodePath("Margin/Hand")
 name_tag = NodePath("NameTag/Label")
 score_tag = NodePath("NameTag/Score")
 button = NodePath("Button")
+summary = NodePath("Margin/Hand/Control")
+summary_label = NodePath("Margin/Hand/Control/MarginContainer/Label")
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=1807607364]
 layout_mode = 2
@@ -39,6 +43,32 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = -32
+alignment = 2
+
+[node name="Control" type="Control" parent="Margin/Hand" unique_id=2133766808]
+visible = false
+z_index = 2
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Margin/Hand/Control" unique_id=974672310]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -15.0
+offset_bottom = 15.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/margin_right = 4
+
+[node name="Label" type="Label" parent="Margin/Hand/Control/MarginContainer" unique_id=2037240334]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "+4"
+label_settings = SubResource("LabelSettings_li78n")
 
 [node name="NameTag" type="Control" parent="." unique_id=1288443956]
 layout_mode = 2

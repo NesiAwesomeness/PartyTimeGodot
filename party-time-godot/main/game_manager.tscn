@@ -17,7 +17,7 @@ modal = NodePath("Action")
 metadata/_custom_type_script = "uid://c5blqehapew3s"
 
 [node name="Action" parent="." unique_id=1984348269 instance=ExtResource("5_p60b5")]
-anchors_preset = -1
+anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5

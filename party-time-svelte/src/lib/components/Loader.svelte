@@ -10,10 +10,10 @@
 	class="relative"
 >
 	<div
-		class="border-[3px] w-full left-0 top-0 h-full border-[#0F0F0F] rounded-[50%] absolute"
+		class="border-[6px] w-full left-0 top-0 h-full border-[#0F0F0F] rounded-[50%] absolute"
 	></div>
 	<div
-		class="border-[3px] w-full left-0 top-0 h-full rounded-[50%] border-x-[transparent] spinner rotate-0 border-[#0F0F0F] border-t-white absolute"
+		class="border-[6px] w-full left-0 top-0 h-full rounded-[50%] border-x-[transparent] spinner rotate-0 border-[#0F0F0F] border-t-white absolute"
 	></div>
 </div>
 

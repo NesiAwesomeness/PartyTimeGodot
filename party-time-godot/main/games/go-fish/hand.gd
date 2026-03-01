@@ -11,6 +11,8 @@ var hand_name = "Jeff"
 @export var score_tag : Label
 
 @export var button : Button
+@export var summary : Control
+@export var summary_label : Label
 
 func _ready():
 	name_tag.text = hand_name
@@ -21,7 +23,7 @@ func _ready():
 	button.pressed.connect(on_button_pressed)
 
 func update_score(score):
-	score_tag.text = str(int(score))
+	score_tag.text = str(int(score)) 
 
 func update_hand(new_hand : Array):
 	if not score_tag.visible:
@@ -31,17 +33,31 @@ func update_hand(new_hand : Array):
 	var cards_to_add : Array = new_hand.filter(func(card): return not hand.has(card))
 	
 	for card in cards_to_add:
+		if hand.size() > 3 and not is_me:
+			summary.show()
+			summary.move_to_front()
+			summary_label.text = str("+",new_hand.size()-3)
+			continue
+		
+		hand.append(card)
+		summary.hide()
+		
+		var card_name = String(card.rank) if is_me else String(card.suite + card.rank)
+		if hand_container.has_node(card_name): 
+			hand_container.get_node(card_name).add_to_count()
+			continue
+		
 		var card_node : Card = card_scene.instantiate()
-		card_node.name = StringName(card.suite + card.rank)
+		card_node.name = card_name
 		
 		hand_container.add_child(card_node)
 		card_node.set_up(card, is_me)
-		hand.append(card)
 	
 	for card in cards_to_remove:
-		if not hand_container.has_node(card.suite + card.rank): return
+		var card_name = String(card.rank) if is_me else String(card.suite + card.rank)
+		if not hand_container.has_node(card_name): break
 		
-		var card_node : Card = hand_container.get_node(card.suite + card.rank)
+		var card_node : Card = hand_container.get_node(card_name)
 		card_node.queue_free()
 		hand.erase(card)
 

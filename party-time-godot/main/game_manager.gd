@@ -5,6 +5,7 @@ class_name GameManager
 @export var modal : Control
 
 static var my_uid = ''
+static var chat_data = {}
 
 #this only works in Web Builds
 var web_callback_ref
@@ -15,6 +16,14 @@ func _ready():
 	
 	NetworkManager.mesh_entered.connect(on_mesh_entered)
 	NetworkManager.mesh_exited.connect(on_mesh_exited)
+
+func on_mesh_entered():
+	modal.hide()
+	print("In Mesh")
+
+func on_mesh_exited():
+	modal.show()
+	print("Not in Mesh")
 
 func godot_callback(args):
 	var function_name = args[0]
@@ -38,26 +47,20 @@ func godot_callback(args):
 			NetworkManager.update_active_players(parsed_data)
 			return
 	
+	call( function_name, parsed_data )
 	if parsed_data is Dictionary:
-		call( function_name, parsed_data )
 		send_data( function_name, parsed_data )
 
-func on_mesh_entered():
-	modal.hide()
-	print("In Mesh")
+func update_chat(new_chat_data : Dictionary):
+	chat_data = new_chat_data
+	my_uid = chat_data.myID
 
-func on_mesh_exited():
-	modal.show()
-	print("Not in Mesh")
+func initialize_game(game_key):
+	var game_scene : GameScene = game_scenes[game_key].instantiate()
+	send_data("send_game", game_scene.initialize_game())
+	game_scene.free()
 
-func start_game(game : Dictionary):
-	my_uid = game.chatData.myID
-	
-	if not game.has("gameData"):
-		print(" No game data. ")
-		return
-	
-	var game_data = game.gameData
+func start_game(game_data : Dictionary):
 	if game_data.key == "" : return
 	
 	if not game_scenes.has(game_data.key):
@@ -69,10 +72,11 @@ func start_game(game : Dictionary):
 	game_scene.add_to_group("GameScene")
 	
 	#serve game...
-	game_scene.on_server_update(game)
+	game_scene.set_up(game_data)
 
 func update_game(data):
-	get_tree().call_group("GameScene", "on_server_update", data)
+	print("ummm, game state updated")
+	get_tree().call_group("GameScene", "on_game_state_update", data)
 
 #when the user presses the send button.
 func send_game(_data):

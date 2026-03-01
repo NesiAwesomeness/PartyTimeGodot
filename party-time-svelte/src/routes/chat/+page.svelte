@@ -367,7 +367,7 @@
 	</Modal>
 	<div class="chat-page-wrapper">
 		{#if $userStore.uid === ''}
-			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size={100} /></div>
+			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size={64} /></div>
 		{:else}
 			<div class="chat-view">
 				<div class="friend-seek-wrapper box">

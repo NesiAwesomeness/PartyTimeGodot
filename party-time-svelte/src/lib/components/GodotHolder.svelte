@@ -1,5 +1,5 @@
 <script>
-	import { currentGame, currentChat } from '$lib/appData';
+	import { currentGame, currentChat, gameRequest } from '$lib/appData';
 	import { rtdb } from '$lib/firebase';
 	import { userStore } from '$lib/userData';
 	import {
@@ -23,19 +23,16 @@
 	let myGodotId = 0;
 
 	let sessionRef;
+
 	let playersUnsub;
 	let signalingUnsub;
+	let gameStateUnsub;
 
 	$: if (isGameOpen) {
 		joinSession();
-		gameUpdate('start_game');
+		gameStart();
 	} else {
 		leaveSession();
-	}
-
-	//if the game changes change, this should run
-	$: if ($currentGame) {
-		gameUpdate('update_game');
 	}
 
 	console.log(isGameOpen && isLoaded);
@@ -113,6 +110,7 @@
 			rtdb,
 			`chats/${$currentChat.id}/games/${$currentGame.id}/active_players`
 		);
+
 		playersUnsub = onValue(allPlayersRef, (snapshot) => {
 			const players = snapshot.val();
 			if (players) {
@@ -137,6 +135,7 @@
 
 		if (playersUnsub) playersUnsub();
 		if (signalingUnsub) signalingUnsub();
+		if (gameStateUnsub) gameStateUnsub();
 
 		myGodotId = 0;
 	}
@@ -163,23 +162,37 @@
 	}
 
 	// FIREBASE TO GODOT
-	function gameUpdate(functionName) {
+	function gameStart() {
+		pushGodot('start_game', $currentGame.gameData);
+		const gameStateRef = ref(rtdb, `chats/${$currentChat.id}/games/${$currentGame.id}/gameState/`);
+
+		gameStateUnsub = onValue(gameStateRef, (snapshot) => {
+			const gameState = snapshot.val();
+			if (gameState) {
+				pushGodot('update_game', gameState);
+			}
+		});
+	}
+
+	$: if ($gameRequest) {
+		pushGodot('initialize_game', $gameRequest);
+		gameRequest.set(null);
+	}
+
+	$: if ($currentChat) {
 		let members = {};
 
 		if ($currentChat.members) {
 			members = $currentChat.members;
-		}
+			const memberIds = Object.keys(members);
 
-		const memberIds = Object.keys(members);
-		pushGodot(functionName, {
-			gameData: $currentGame.gameData,
-			chatData: {
+			pushGodot('update_chat', {
 				playerIndex: $currentChat.playerIndex,
 				memberCount: memberIds.length,
 				members,
 				myID: $userStore.uid
-			}
-		});
+			});
+		}
 	}
 
 	// SVELTE TO GODOT
@@ -192,7 +205,14 @@
 
 	// GODOT TO SVELTE
 	function pullGodot(event) {
-		if (!isGameOpen) return;
+		const message = event.data.message;
+		const payload = event.data.data;
+
+		if (!isGameOpen) {
+			if (message === 'send_game') sendGame(payload);
+			return;
+		}
+
 		if (!event.data) return;
 
 		if (event.data && event.data.type === 'GODOT_SIGNAL') {
@@ -210,9 +230,6 @@
 
 		if (!event.data.message) return;
 
-		const message = event.data.message;
-		const payload = event.data.data;
-
 		// FIX this ngl.
 		switch (message) {
 			case 'upload':
@@ -221,7 +238,20 @@
 			case 'batch_update':
 				saveGameState(payload);
 				break;
+			case 'send_game':
+				sendGame(payload);
+				break;
 		}
+	}
+
+	async function sendGame(gameData) {
+		const chatRef = ref(rtdb, `chats/${$currentChat.id}/games`);
+		const game = { ...gameData, timestamp: Date.now() };
+		console.log(game);
+
+		try {
+			await push(chatRef, game);
+		} catch (error) {}
 	}
 
 	// SVELTE to FIREBASE
@@ -262,10 +292,6 @@
 
 	function closeGame() {
 		pushGodot('on_game_close', {});
-	}
-
-	function sendGame() {
-		pushGodot('send_game', { timestamp: Date.now() });
 	}
 
 	onDestroy(() => {
@@ -327,25 +353,6 @@
 				/>
 			</svg>
 		</button>
-		{#if false}
-			<button title="Send Game" style="background-color: cadetblue;" on:click={sendGame}>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					height="28px"
-					viewBox="0 -960 960 960"
-					width="28px"
-					fill="#e3e3e3"
-					style="
-					position: relative;
-					top: 1px;
-					left: 2px;
-					"
-					><path
-						d="M176-183q-20 8-38-3.5T120-220v-180l320-80-320-80v-180q0-22 18-33.5t38-3.5l616 260q25 11 25 37t-25 37L176-183Z"
-					/></svg
-				>
-			</button>
-		{/if}
 	</div>
 </div>
 

@@ -1,27 +1,17 @@
 <script>
 	import { rtdb } from '$lib/firebase';
-	import { currentChat, getGameState } from '$lib/appData';
+	import { currentChat, gameRequest } from '$lib/appData';
 	import { push, ref, update } from 'firebase/database';
 
 	export let game = {
 		name: 'Game Title',
-		key: '',
-		isTurnBased: true
+		key: ''
 	};
 
 	async function newGame() {
 		if ($currentChat.id === '') return;
 
-		const chatRef = ref(rtdb, `chats/${$currentChat.id}/games`);
-
-		game.timestamp = Date.now();
-		game = { ...game, gameState: getGameState(game.key) };
-
-		console.log(game);
-
-		try {
-			await push(chatRef, game);
-		} catch (error) {}
+		gameRequest.set(game.key);
 	}
 </script>
 

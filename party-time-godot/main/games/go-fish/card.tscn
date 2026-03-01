@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bv4xcvounx4ie"]
 
 [ext_resource type="Script" uid="uid://1kymq4urctmm" path="res://main/games/go-fish/card.gd" id="1_wrska"]
+[ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="2_66do0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ty8dp"]
 bg_color = Color(1, 1, 1, 1)
@@ -18,8 +19,12 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 expand_margin_bottom = 24.0
 
+[sub_resource type="LabelSettings" id="LabelSettings_gv53k"]
+font = ExtResource("2_66do0")
+
 [sub_resource type="LabelSettings" id="LabelSettings_ty8dp"]
-font_size = 28
+font = ExtResource("2_66do0")
+font_size = 20
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wrska"]
 
@@ -41,16 +46,17 @@ expand_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_66do0"]
 
-[node name="Card" type="PanelContainer" unique_id=1948303595]
+[node name="Card" type="PanelContainer" unique_id=1948303595 node_paths=PackedStringArray("count_label", "number")]
 self_modulate = Color(0.27057132, 0.33519793, 0.7124387, 1)
 custom_minimum_size = Vector2(100, 132)
 offset_right = 50.0
 offset_bottom = 64.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_ty8dp")
 script = ExtResource("1_wrska")
+count_label = NodePath("Number/PanelContainer/LabelMargin/Count")
+number = NodePath("Number")
 
 [node name="Number" type="Control" parent="." unique_id=1620388699]
-visible = false
 show_behind_parent = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -61,20 +67,24 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -23.0
+offset_top = -20.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_wrska")
 
 [node name="LabelMargin" type="MarginContainer" parent="Number/PanelContainer" unique_id=291664351]
 layout_mode = 2
-theme_override_constants/margin_left = 8
+size_flags_vertical = 4
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 2
 theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 2
 
-[node name="Multiplier" type="Label" parent="Number/PanelContainer/LabelMargin" unique_id=47770679]
+[node name="Count" type="Label" parent="Number/PanelContainer/LabelMargin" unique_id=47770679]
 layout_mode = 2
 size_flags_vertical = 0
-text = "×2"
+text = "2 of 3"
+label_settings = SubResource("LabelSettings_gv53k")
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=766777781]
 layout_mode = 2
@@ -84,17 +94,13 @@ theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
 [node name="Label" type="Label" parent="Margin" unique_id=1092225178]
+custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "1"
+text = "Fishbones"
 label_settings = SubResource("LabelSettings_ty8dp")
-
-[node name="Label2" type="Label" parent="Margin" unique_id=601986288]
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 8
-text = "1"
-label_settings = SubResource("LabelSettings_ty8dp")
+autowrap_mode = 2
+clip_text = true
 
 [node name="Selectable" type="Button" parent="." unique_id=1077289270]
 layout_mode = 2

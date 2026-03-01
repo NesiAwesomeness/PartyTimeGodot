@@ -20,7 +20,77 @@ class_name GoFish
 static var selected_player_name = ""
 static var selected_rank = ""
 
-func on_server_setup(_id):
+enum Tier {
+	STANDARD = 4,
+	RARE = 3,
+	LEGENDARY = 2
+}
+
+const suites = ['R', 'G', 'B', 'Y']
+
+const CARDS = {
+	"boots": { "name": "Old Boots", "tier": Tier.STANDARD, "points": 1},
+	"coins": { "name": "Rusty Coins", "tier": Tier.STANDARD, "points": 1},
+	"soggy_socks": { "name": "Soggy Socks", "tier": Tier.STANDARD, "points": 1 },
+	"tin_cans": { 'name': "Tin Cans", 'tier': Tier.STANDARD, 'points': 1 },
+	"fishbones": { 'name': "Fish Bones", 'tier': Tier.STANDARD, 'points': 1 },
+	"salmon": { 'name': "Salmon", 'tier': Tier.STANDARD, 'points': 1 },
+	"rubber_duck": { 'name': "Rubber Duck", 'tier': Tier.STANDARD, 'points': 1 },
+	"broken_shades": { 'name': "Broken Shades", 'tier': Tier.STANDARD, 'points': 1 },
+	"silver_tooth": { 'name': "Silver Tooth", 'tier': Tier.STANDARD, 'points': 1 },
+	"missing_card": { 'name': "Missing Card", 'tier': Tier.RARE, 'points': 3 },
+	"fuzzy_dice": { 'name': "Fuzzy Dice", 'tier': Tier.RARE, 'points': 3 },
+	"soggy_shoes": { 'name': "Soggy Shoes", 'tier': Tier.RARE, 'points': 3 },
+	"tuna": { 'name': "Tuna", 'tier': Tier.RARE, 'points': 3 },
+	"diamond_rings": {"name": "Diamond Rings", "tier": Tier.LEGENDARY, "points": 5},
+	"cell_phone": { "name": "Cell Phone", "tier": Tier.LEGENDARY, 'points': 5 },
+}
+
+const POWER_UPS = [
+	"magnifying_glass",
+	"silver_tongue",
+	"fast_hands"
+]
+
+func initialize_game() -> Dictionary:
+	var deck : Array = []
+	for card_id in CARDS.keys():
+		var card_data = CARDS[card_id]
+		var copies_to_add = card_data["tier"]
+		for i in range(copies_to_add):
+			deck.append({
+				"rank" : card_id,
+				"suite" : suites[i]
+			})
+		deck.shuffle()
+	
+	var hand_size = 5
+	var hands = {}
+	var scores = {}
+	
+	for member in GameManager.chat_data.members:
+		var hand = []
+		for card in hand_size:
+			hand.append( deck.pop_back() )
+		
+		hands[member] = hand
+		scores[member] = 0
+	 
+	print("Deck generated with %d cards." % deck.size())
+	
+	return {
+		'name' : "Go Fish",
+		'key' : 'GoFish',
+		'gameState' : {
+			'playerTurn' : 1,
+			'deck' : deck,
+			'hands' : hands,
+			'scores' : scores
+		}
+	}
+
+
+func on_set_up():
 	add_to_group("HandListener")
 	add_to_group("CardListener")
 	
@@ -31,19 +101,26 @@ func on_server_setup(_id):
 		var score : int = game_state.scores[uid]
 		
 		if uid != GameManager.my_uid:
-			var hand_node : CardHand = players_node.get_node_or_null(uid)
-			if not hand_node:
-				hand_node = hand_scene.instantiate()
-				hand_node.name = uid
-				hand_node.hand_name = chat_data.members[uid]
-				
-				players_node.add_child(hand_node)
+			var hand_node : CardHand = hand_scene.instantiate()
+			hand_node.name = uid
+			hand_node.hand_name = GameManager.chat_data.members[uid]
+			
+			players_node.add_child(hand_node)
 			hand_node.update_hand( hand )
 			hand_node.update_score( score )
 			continue
 		
 		my_hand_node.update_hand( hand )
 		my_hand_node.update_score( score )
+
+func on_game_state_update(_game_state):
+	game_state = _game_state
+	
+	print(game_state.playerTurn == GameManager.chat_data.playerIndex, " is my turn?")
+	
+	status_label.text = ("Your Turn" 
+	if game_state.playerTurn == GameManager.chat_data.playerIndex 
+	else "Waiting for "+ GameManager.chat_data.members.values()[game_state.playerTurn])
 
 func on_player_selected(player_name):
 	selected_player_name = player_name
@@ -59,7 +136,7 @@ func on_card_selected(rank):
 	request_label.text = ", Do you have any: "
 	
 	rank_label.show()
-	rank_label.text = rank+"s?"
+	rank_label.text = CARDS[rank].name+ "s?"
 
 func on_ask(player_name, card_rank):
 	selected_rank = ""
@@ -69,14 +146,14 @@ func on_ask(player_name, card_rank):
 	ask_panel.hide()
 	rank_label.hide()
 	
-	
 	get_tree().call_group("HandListener", "on_player_deselect")
-	print("Hey ", player_name, ", Do you have any ", card_rank, "s?")
+	print("Hey ", player_name, ", Do you have any ", CARDS[card_rank].name, "s?")
 	
 	rpc("action_message", str(
-		chat_data.members[GameManager.my_uid]," asked ",player_name," for ",card_rank,"s"))
+		GameManager.chat_data.members[GameManager.my_uid]," asked ",
+		player_name," for ", CARDS[card_rank].name ,"s"))
 	
-	var player_id : String = chat_data.members.find_key(player_name)
+	var player_id : String = GameManager.chat_data.members.find_key(player_name)
 	var player_hand : Array = game_state.hands[player_id]
 	
 	var rank_cards : Array = player_hand.filter( func(card): return card.rank == card_rank )
@@ -100,11 +177,6 @@ func on_ask(player_name, card_rank):
 	#save to the cloud.
 	GameManager.send_data("batch_update", game_state)
 
-func _on_server_update(_game_data, _chat_data, _game_state):
-	status_label.text = ("Your Turn" 
-	if game_state.playerTurn == chat_data.playerIndex 
-	else "Waiting for "+ chat_data.members.values()[game_state.playerTurn])
-
 func draw_card():
 	#draw cards and skip your turn.
 	
@@ -122,11 +194,11 @@ func draw_card():
 		rpc("update_hand", GameManager.my_uid, my_hand)
 		
 		#if it's your turn move to the next person.
-		if game_state.playerTurn == chat_data.playerIndex:
+		if game_state.playerTurn == GameManager.chat_data.playerIndex:
 			game_state.playerTurn = wrapi( 
-				chat_data["playerIndex"] + 1, 0, int(chat_data["memberCount"]) )
+				GameManager.chat_data["playerIndex"] + 1, 0, int(GameManager.chat_data["memberCount"]) )
 		
-		rpc("action_message", chat_data.members[GameManager.my_uid] +" went FISHING")
+		rpc("action_message", GameManager.chat_data.members[GameManager.my_uid] +" went FISHING")
 		action_message("GO FISH")
 	else:
 		end_game()
@@ -140,12 +212,13 @@ func check_for_books(message):
 		if counts.has(card.rank): counts[card.rank] += 1 
 		else: counts[card.rank] = 1
 	
-	for rank in counts: if counts[rank] == 4:
-		print("BOOK! ", rank)
+	for rank in counts: if counts[rank] == CARDS[rank].tier:
+		print("BOOK! ", CARDS[rank].name)
 		my_hand = my_hand.filter(func(card): return card.rank != rank)
 		
 		rpc("update_hand", GameManager.my_uid, my_hand)
-		rpc("action_message", chat_data.members[GameManager.my_uid] +" completed "+rank+"s"+message)
+		rpc("action_message", GameManager.chat_data.members[GameManager.my_uid] +
+		" completed "+CARDS[rank].name+"s"+message)
 		rpc("add_point", GameManager.my_uid)
 
 @rpc("any_peer", "call_local", "reliable")
@@ -183,7 +256,7 @@ func end_game():
 	pass
 
 func on_send_ask_pressed():
-	if game_state["playerTurn"] != chat_data["playerIndex"]:
+	if game_state["playerTurn"] != GameManager.chat_data["playerIndex"]:
 		print("not your turn")
 		return
 	ask_panel.hide()

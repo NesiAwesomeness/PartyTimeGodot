@@ -3,6 +3,15 @@ extends GameScene
 const PLAYER_SCENE = preload("res://main/games/world/player.tscn")
 @onready var players_node = $Players
 
+func initialize_game() -> Dictionary:
+	return {
+		'name' : "World Game",
+		'key' : 'WorldGame',
+		'gameState' : {
+			'positions' : {}
+		}
+	}
+
 func on_server_setup(id):
 	player_joined(id)
 	for peer_id in multiplayer.get_peers():
