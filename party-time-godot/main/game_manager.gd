@@ -1,8 +1,8 @@
 extends Node
 class_name GameManager
 
-const color_game_scene = preload("res://main/games/color-game/color_game.tscn")
-const world_game_scene = preload("res://main/games/world/world_game.tscn")
+@export var game_scenes : Dictionary[String, PackedScene]
+@export var modal : Control
 
 static var my_uid = ''
 
@@ -12,6 +12,9 @@ func _ready():
 	web_callback_ref = JavaScriptBridge.create_callback(godot_callback)
 	var window = JavaScriptBridge.get_interface("window")
 	window.sendToGodot = web_callback_ref
+	
+	NetworkManager.mesh_entered.connect(on_mesh_entered)
+	NetworkManager.mesh_exited.connect(on_mesh_exited)
 
 func godot_callback(args):
 	var function_name = args[0]
@@ -26,18 +29,26 @@ func godot_callback(args):
 	
 	match function_name:
 		"setup_network":
-			MultiplayerManager.setup_network(parsed_data.id)
+			NetworkManager.setup_network(parsed_data.id)
 			return
 		"handle_webrtc_signal":
-			MultiplayerManager.handle_webrtc_signal(parsed_data)
+			NetworkManager.handle_webrtc_signal(parsed_data)
 			return
 		"update_active_players":
-			MultiplayerManager.update_active_players(parsed_data)
+			NetworkManager.update_active_players(parsed_data)
 			return
 	
 	if parsed_data is Dictionary:
-		call(function_name, parsed_data )
-		send_data(function_name, parsed_data )
+		call( function_name, parsed_data )
+		send_data( function_name, parsed_data )
+
+func on_mesh_entered():
+	modal.hide()
+	print("In Mesh")
+
+func on_mesh_exited():
+	modal.show()
+	print("Not in Mesh")
 
 func start_game(game : Dictionary):
 	my_uid = game.chatData.myID
@@ -49,14 +60,15 @@ func start_game(game : Dictionary):
 	var game_data = game.gameData
 	if game_data.key == "" : return
 	
-	var game_scene : GameScene
+	if not game_scenes.has(game_data.key):
+		print("Game Unavailable")
+		return
 	
-	match game_data.key:
-		"ColorGame" : game_scene = color_game_scene.instantiate()
-		"WorldGame" : game_scene = world_game_scene.instantiate()
-	
+	var game_scene : GameScene = game_scenes[game_data.key].instantiate()
 	add_child(game_scene)
 	game_scene.add_to_group("GameScene")
+	
+	#serve game...
 	game_scene.on_server_update(game)
 
 func update_game(data):
@@ -70,7 +82,7 @@ func on_game_close(_b):
 	#chill for half a second before deleting.
 	create_tween().tween_callback( get_tree().call_group.bind( 
 		"GameScene", "queue_free" ) ).set_delay( 0.16 )
-	create_tween().tween_callback( MultiplayerManager.close_game ).set_delay( 0.16 )
+	create_tween().tween_callback( NetworkManager.close_game ).set_delay( 0.16 )
 
 static func send_data(message_name: String, payload : Dictionary):
 	var message_data = {"message": message_name, "data": payload }

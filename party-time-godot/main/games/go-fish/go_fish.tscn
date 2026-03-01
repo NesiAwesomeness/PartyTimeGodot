@@ -2,7 +2,132 @@
 
 [ext_resource type="Script" uid="uid://1bk7l0mcqpwb" path="res://main/games/go-fish/go_fish.gd" id="1_6o1i6"]
 [ext_resource type="PackedScene" uid="uid://ixl1ea78vhl0" path="res://main/games/go-fish/hand.tscn" id="2_rcvgb"]
+[ext_resource type="Texture2D" uid="uid://ds2q5of8gi4s" path="res://assets/icons/send.svg" id="3_kiktm"]
+[ext_resource type="PackedScene" uid="uid://bws57ngrxw5q1" path="res://main/games/go-fish/action.tscn" id="3_wecqu"]
 
-[node name="GoFish" type="Node" unique_id=1464147714]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kiktm"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 16.0
+expand_margin_right = 16.0
+shadow_color = Color(0, 0, 0, 0.0627451)
+shadow_size = 8
+
+[node name="GoFish" type="Node" unique_id=1464147714 node_paths=PackedStringArray("players_node", "my_hand_node", "ask_panel", "player_name_label", "request_label", "rank_label", "action_labels", "status_label")]
 script = ExtResource("1_6o1i6")
-player_scene = ExtResource("2_rcvgb")
+hand_scene = ExtResource("2_rcvgb")
+players_node = NodePath("CenterContainer/Opps")
+my_hand_node = NodePath("Me/Hand")
+ask_panel = NodePath("AskPanel/Container/PanelContainer")
+player_name_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/PlayerName")
+request_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/Sentence")
+rank_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/Rank")
+action_labels = NodePath("AskPanel/Container/Actions")
+action_label_scene = ExtResource("3_wecqu")
+status_label = NodePath("Action")
+
+[node name="AskPanel" type="CenterContainer" parent="." unique_id=1275222540]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Container" type="VBoxContainer" parent="AskPanel" unique_id=2131670311]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Actions" type="VBoxContainer" parent="AskPanel/Container" unique_id=1632205232]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="PanelContainer" type="PanelContainer" parent="AskPanel/Container" unique_id=177364052]
+self_modulate = Color(0.14415902, 0.14415902, 0.14415902, 1)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_kiktm")
+
+[node name="MarginContainer" type="MarginContainer" parent="AskPanel/Container/PanelContainer" unique_id=199085975]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="AskPanel/Container/PanelContainer/MarginContainer" unique_id=119145763]
+layout_mode = 2
+
+[node name="PlayerName" type="Label" parent="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer" unique_id=2079385623]
+layout_mode = 2
+
+[node name="Sentence" type="Label" parent="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer" unique_id=996642386]
+layout_mode = 2
+
+[node name="Rank" type="Label" parent="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer" unique_id=119716327]
+layout_mode = 2
+
+[node name="SendButton" type="MarginContainer" parent="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer" unique_id=40740257]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+
+[node name="Button" type="Button" parent="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/SendButton" unique_id=244902810]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+icon = ExtResource("3_kiktm")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Me" type="CenterContainer" parent="." unique_id=1474807593]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -235.0
+offset_bottom = -114.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hand" parent="Me" unique_id=913138055 instance=ExtResource("2_rcvgb")]
+layout_mode = 2
+is_me = true
+
+[node name="Hand" parent="Me/Hand/Margin" parent_id_path=PackedInt32Array(913138055, 1807607364) index="0" unique_id=282532123]
+theme_override_constants/separation = -36
+
+[node name="Label" parent="Me/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="0" unique_id=761011171]
+visible = false
+
+[node name="Score" parent="Me/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="1" unique_id=414416212]
+visible = false
+
+[node name="Button" parent="Me/Hand" index="2" unique_id=316015903]
+visible = false
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=12555329]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 175.0
+offset_bottom = 175.0
+grow_horizontal = 2
+
+[node name="Opps" type="HBoxContainer" parent="CenterContainer" unique_id=538092638]
+layout_mode = 2
+
+[node name="Action" parent="." unique_id=1984348269 instance=ExtResource("3_wecqu")]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -46.5
+offset_top = 64.0
+offset_right = 46.5
+offset_bottom = 91.916664
+grow_horizontal = 2
+text = "Your turn"
+
+[connection signal="pressed" from="AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/SendButton/Button" to="." method="on_send_ask_pressed"]
+
+[editable path="Me/Hand"]

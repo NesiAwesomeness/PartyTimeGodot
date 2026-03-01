@@ -176,7 +176,7 @@
 			chatData: {
 				playerIndex: $currentChat.playerIndex,
 				memberCount: memberIds.length,
-				members: $currentChat.members,
+				members,
 				myID: $userStore.uid
 			}
 		});
@@ -327,7 +327,7 @@
 				/>
 			</svg>
 		</button>
-		{#if $currentGame.isTurnBased}
+		{#if false}
 			<button title="Send Game" style="background-color: cadetblue;" on:click={sendGame}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

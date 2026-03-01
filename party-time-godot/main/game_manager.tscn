@@ -1,7 +1,31 @@
 [gd_scene format=3 uid="uid://c1yfeomj3y1l1"]
 
 [ext_resource type="Script" uid="uid://c5blqehapew3s" path="res://main/game_manager.gd" id="1_jc15p"]
+[ext_resource type="PackedScene" uid="uid://xd0ij5ynugkd" path="res://main/games/color-game/color_game.tscn" id="2_n4uli"]
+[ext_resource type="PackedScene" uid="uid://bgvlenp5lvf0h" path="res://main/games/world/world_game.tscn" id="3_2ji1x"]
+[ext_resource type="PackedScene" uid="uid://h5fekp4xhdh1" path="res://main/games/go-fish/go_fish.tscn" id="4_2ji1x"]
+[ext_resource type="PackedScene" uid="uid://bws57ngrxw5q1" path="res://main/games/go-fish/action.tscn" id="5_p60b5"]
 
-[node name="GameManager" type="Node" unique_id=1186125986]
+[node name="GameManager" type="Node" unique_id=1186125986 node_paths=PackedStringArray("modal")]
 script = ExtResource("1_jc15p")
+game_scenes = Dictionary[String, PackedScene]({
+"ColorGame": ExtResource("2_n4uli"),
+"GoFish": ExtResource("4_2ji1x"),
+"WorldGame": ExtResource("3_2ji1x")
+})
+modal = NodePath("Action")
 metadata/_custom_type_script = "uid://c5blqehapew3s"
+
+[node name="Action" parent="." unique_id=1984348269 instance=ExtResource("5_p60b5")]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -96.0
+offset_top = -27.916626
+offset_right = 96.0
+offset_bottom = -36.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Waiting for others..."

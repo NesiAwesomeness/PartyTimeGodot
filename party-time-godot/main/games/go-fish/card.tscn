@@ -1,0 +1,103 @@
+[gd_scene format=3 uid="uid://bv4xcvounx4ie"]
+
+[ext_resource type="Script" uid="uid://1kymq4urctmm" path="res://main/games/go-fish/card.gd" id="1_wrska"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ty8dp"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.0627451)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wrska"]
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_bottom = 24.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_ty8dp"]
+font_size = 28
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wrska"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66do0"]
+draw_center = false
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 2.0
+expand_margin_top = 2.0
+expand_margin_right = 2.0
+expand_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_66do0"]
+
+[node name="Card" type="PanelContainer" unique_id=1948303595]
+self_modulate = Color(0.27057132, 0.33519793, 0.7124387, 1)
+custom_minimum_size = Vector2(100, 132)
+offset_right = 50.0
+offset_bottom = 64.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_ty8dp")
+script = ExtResource("1_wrska")
+
+[node name="Number" type="Control" parent="." unique_id=1620388699]
+visible = false
+show_behind_parent = true
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="PanelContainer" type="PanelContainer" parent="Number" unique_id=93243953]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_wrska")
+
+[node name="LabelMargin" type="MarginContainer" parent="Number/PanelContainer" unique_id=291664351]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+
+[node name="Multiplier" type="Label" parent="Number/PanelContainer/LabelMargin" unique_id=47770679]
+layout_mode = 2
+size_flags_vertical = 0
+text = "×2"
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=766777781]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Label" type="Label" parent="Margin" unique_id=1092225178]
+layout_mode = 2
+size_flags_vertical = 1
+text = "1"
+label_settings = SubResource("LabelSettings_ty8dp")
+
+[node name="Label2" type="Label" parent="Margin" unique_id=601986288]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+text = "1"
+label_settings = SubResource("LabelSettings_ty8dp")
+
+[node name="Selectable" type="Button" parent="." unique_id=1077289270]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_wrska")
+theme_override_styles/hover = SubResource("StyleBoxFlat_66do0")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_66do0")

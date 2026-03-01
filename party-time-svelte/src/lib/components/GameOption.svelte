@@ -1,10 +1,11 @@
 <script>
 	import { rtdb } from '$lib/firebase';
-	import { currentChat } from '$lib/appData';
+	import { currentChat, getGameState } from '$lib/appData';
 	import { push, ref, update } from 'firebase/database';
 
 	export let game = {
 		name: 'Game Title',
+		key: '',
 		isTurnBased: true
 	};
 
@@ -14,10 +15,9 @@
 		const chatRef = ref(rtdb, `chats/${$currentChat.id}/games`);
 
 		game.timestamp = Date.now();
+		game = { ...game, gameState: getGameState(game.key) };
 
-		if (game.isTurnBased) {
-			//Make sure it doesn't start from your turn.
-		}
+		console.log(game);
 
 		try {
 			await push(chatRef, game);

@@ -17,8 +17,13 @@
 		}
 	}
 
-	$: isTurnBased = Object.keys(gameData.gameState).includes('playerTurn');
-	$: isRoundPlay = Object.keys(gameData.gameState).includes('round');
+	$: isTurnBased =
+		Object.keys(gameData).includes('gameState') &&
+		Object.keys(gameData.gameState).includes('playerTurn');
+
+	$: isRoundPlay =
+		Object.keys(gameData).includes('gameState') &&
+		Object.keys(gameData.gameState).includes('round');
 
 	let fromYou = false;
 	$: if (isTurnBased) {

@@ -1,12 +1,102 @@
 [gd_scene format=3 uid="uid://ixl1ea78vhl0"]
 
 [ext_resource type="Script" uid="uid://xr6u0of0bscq" path="res://main/games/go-fish/hand.gd" id="1_unbw3"]
+[ext_resource type="PackedScene" uid="uid://bv4xcvounx4ie" path="res://main/games/go-fish/card.tscn" id="2_li78n"]
 
-[node name="Hand" type="Control" unique_id=818162089]
-layout_mode = 3
+[sub_resource type="LabelSettings" id="LabelSettings_li78n"]
+font_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_li78n"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 16.0
+expand_margin_right = 16.0
+shadow_color = Color(0, 0, 0, 0.0627451)
+shadow_size = 8
+
+[node name="Hand" type="PanelContainer" unique_id=1093053303 node_paths=PackedStringArray("hand_container", "name_tag", "score_tag", "button")]
+self_modulate = Color(1, 1, 1, 0)
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_unbw3")
+card_scene = ExtResource("2_li78n")
+hand_container = NodePath("Margin/Hand")
+name_tag = NodePath("NameTag/Label")
+score_tag = NodePath("NameTag/Score")
+button = NodePath("Button")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1807607364]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Hand" type="HBoxContainer" parent="Margin" unique_id=282532123]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = -32
+
+[node name="NameTag" type="Control" parent="." unique_id=1288443956]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="NameTag" unique_id=761011171]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -21.5
+offset_right = 21.5
+offset_bottom = 27.916687
+grow_horizontal = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+text = "Nesi"
+label_settings = SubResource("LabelSettings_li78n")
+
+[node name="Panel" type="Panel" parent="NameTag/Label" unique_id=1529973111]
+self_modulate = Color(0.18909413, 0.18909413, 0.18909413, 1)
+show_behind_parent = true
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_unbw3")
+theme_override_styles/panel = SubResource("StyleBoxFlat_li78n")
+
+[node name="Score" type="Label" parent="NameTag" unique_id=414416212]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -6.0
+offset_top = -27.916672
+offset_right = 6.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
+size_flags_vertical = 8
+text = "0"
+label_settings = SubResource("LabelSettings_li78n")
+
+[node name="Panel" type="Panel" parent="NameTag/Score" unique_id=2061377394]
+self_modulate = Color(0.8855006, 0.25762075, 0.2839111, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_li78n")
+
+[node name="Button" type="Button" parent="." unique_id=316015903]
+layout_mode = 2
+flat = true

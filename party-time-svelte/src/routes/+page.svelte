@@ -4,8 +4,10 @@
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/userData';
 	import { playgrounds, currentChat } from '$lib/appData';
+
 	import Loader from '$lib/components/Loader.svelte';
 	import { toast } from 'svelte-sonner';
+
 	import Modal from '$lib/components/Modal.svelte';
 	import EyeOpen from '$lib/components/EyeOpen.svelte';
 	import EyeClosed from '$lib/components/EyeClosed.svelte';
@@ -55,7 +57,7 @@
 
 <div class="account-auth">
 	<div class="account-auth-spacer">
-		<h1 class="game-title">PARTY TIME!</h1>
+		<h2 class="game-title">PARTY TIME!</h2>
 	</div>
 	<div class="account-auth-form">
 		<div>
@@ -254,9 +256,10 @@
 	}
 
 	.game-title {
-		font-size: 8em;
+		font-size: 5em;
 		height: 100%;
 		margin: 0;
+
 		width: 100%;
 		color: white;
 		/* margin-inline: auto; */

@@ -1,3 +1,4 @@
+import { get } from 'svelte/store';
 import { readable, writable } from 'svelte/store';
 
 export const playgrounds = writable([]);
@@ -16,25 +17,21 @@ export const currentChat = writable({
 
 // the default is a turn based round game.
 const gameDataDefaults = {
-	isTurnBased: true,
-	playerTurn: 0,
-
 	name: "",
 	key: "",
 
-	isRoundPlay: true,
-	round: 1,
 	sends: 0,
-
 	timestamp: 0.0,
 
 	gameState: {
-		dude: "chill"
+		playerTurn: 0,
+		round: 1,
 	}
 }
 
 export const currentGame = writable({
 	id: "",
+	isTurnBased: false,
 	gameData: gameDataDefaults,
 })
 
@@ -45,24 +42,84 @@ export const games = readable([
 
 		name: "Color Game",
 		key: "ColorGame",
-
-		// this key value is how godot will recognise it.
-		gameState: {
-			stateColor: '#ffffff'
-		}
 	},
 	{
 		...gameDataDefaults,
-		isTurnBased: false,
-		isRoundPlay: false,
-
 		name: "World Game",
 		key: "WorldGame",
-		gameState: {
-
-		}
+	},
+	{
+		...gameDataDefaults,
+		name: "Go Fish",
+		key: "GoFish",
 	}
 ])
+
+export function getGameState(gameKey) {
+	switch (gameKey) {
+		case "GoFish":
+			return getGoFishGameState();
+		case "ColorGame":
+			return getColorGameState();
+		default:
+			return {}
+	}
+}
+
+function getGoFishGameState() {
+	const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "X"]
+	const suites = ["R", "G", "B", "Y"]
+	const members = get(currentChat).members;
+
+	let deck = suites.flatMap(suite =>
+		ranks.map(rank => ({ rank: rank, suite: suite }))
+	);
+
+	shuffle(deck);
+
+	let handSize = 5;
+	let hands = {}
+	let scores = {}
+
+	for (let member of Object.keys(members)) {
+
+		let hand = []
+		while (hand.length < handSize) {
+			hand.push(deck.pop());
+		}
+
+		hands[member] = hand
+
+		// the starting score
+		scores[member] = 0
+	}
+
+
+	return { playerTurn: 0, hands, scores, deck }
+}
+
+function shuffle(array) {
+	let currentIndex = array.length;
+
+	while (currentIndex != 0) {
+		let randomIndex = Math.floor(
+			Math.random() * currentIndex);
+		currentIndex--;
+
+		[array[currentIndex], array[randomIndex]] = [
+			array[randomIndex], array[currentIndex]];
+	}
+}
+
+function getColorGameState() {
+
+	return {
+		playerTurn: 0,
+		round: 1,
+		// generate a random color here.
+		stateColor: '#ffffff'
+	}
+}
 
 export function getDisplayTime(timestamp) {
 	const now = new Date();

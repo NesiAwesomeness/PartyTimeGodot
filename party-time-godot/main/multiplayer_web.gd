@@ -2,11 +2,17 @@ extends Node
 
 signal player_connected(peer_id)
 signal player_disconnected(peer_id)
+
 signal server_setup(peer_id)
+
+signal mesh_entered
+signal mesh_exited
 
 var multiplayer_peer : WebRTCMultiplayerPeer
 var peer_to_uid = {}
 var peers = {}
+
+var in_mesh : bool = false
 
 var my_peer_id : int = 0
 var cloud_master_id : int = -1
@@ -14,7 +20,6 @@ var cloud_master_id : int = -1
 func setup_network(id: int):
 	my_peer_id = id
 	
-	cloud_master_id = my_peer_id
 	peer_to_uid[id] = GameManager.my_uid
 	
 	multiplayer_peer = WebRTCMultiplayerPeer.new()
@@ -29,13 +34,20 @@ func setup_network(id: int):
 				#tell the new peer that I am the master.
 				rpc_id(i, "set_cloud_master", cloud_master_id)
 			player_connected.emit(i)
+			
+			if not in_mesh:
+				in_mesh = true
+				mesh_entered.emit()
 	)
 	multiplayer.peer_disconnected.connect(
-		func(i): 
+		func(i):
+			
 			#if the master disconnects
 			if cloud_master_id == i:
 				elect_new_master()
 			player_disconnected.emit(i)
+			
+			print("peers available ", peers)
 	)
 	
 	server_setup.emit(id)
@@ -97,6 +109,10 @@ func update_active_players(active_ids: Array):
 			multiplayer_peer.remove_peer(peer_id)
 		
 		peers.erase(peer_id)
+	
+	if in_mesh and peers.is_empty():
+		in_mesh = false
+		mesh_exited.emit()
 	
 	print(peers, " the current peers after active player update.")
 

@@ -17,12 +17,16 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-MultiplayerManager="*uid://mg0kamoxohuk"
+NetworkManager="*uid://mg0kamoxohuk"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=1280
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=true
 
 [physics]
 
