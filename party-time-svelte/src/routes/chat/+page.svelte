@@ -372,16 +372,7 @@
 			<div class="chat-view">
 				<div class="friend-seek-wrapper box">
 					<div class="friend-seek">
-						<!-- <img src={search} class="icon" alt="Search" />
-						<input
-							bind:value={searchName}
-							class="search-bar"
-							name="search"
-							type="text"
-							disabled={isSearching}
-							placeholder="Search"
-						/> -->
-
+						<span></span>
 						{#if requestList}
 							<RevealButton
 								src={close}
@@ -621,9 +612,12 @@
 
 	.friend-seek {
 		display: grid;
-		grid-template-columns: auto 1fr auto auto;
+		grid-template-columns: 1fr auto auto;
+
+		height: 24px;
 
 		align-items: center;
+
 		gap: 8px;
 	}
 

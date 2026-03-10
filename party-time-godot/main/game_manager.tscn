@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://h5fekp4xhdh1" path="res://main/games/go-fish/go_fish.tscn" id="4_2ji1x"]
 [ext_resource type="PackedScene" uid="uid://bws57ngrxw5q1" path="res://main/games/go-fish/action.tscn" id="5_p60b5"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p60b5"]
+bg_color = Color(0.02209971, 0.022099705, 0.022099705, 0.105882354)
+
 [node name="GameManager" type="Node" unique_id=1186125986 node_paths=PackedStringArray("modal")]
 script = ExtResource("1_jc15p")
 game_scenes = Dictionary[String, PackedScene]({
@@ -13,17 +16,38 @@ game_scenes = Dictionary[String, PackedScene]({
 "GoFish": ExtResource("4_2ji1x"),
 "WorldGame": ExtResource("3_2ji1x")
 })
-modal = NodePath("Action")
+modal = NodePath("Button")
 metadata/_custom_type_script = "uid://c5blqehapew3s"
 
-[node name="Action" parent="." unique_id=1984348269 instance=ExtResource("5_p60b5")]
+[node name="Button" type="Button" parent="." unique_id=1860866691]
+z_index = 10
+z_as_relative = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_p60b5")
+flat = true
+
+[node name="ColorRect" type="ColorRect" parent="Button" unique_id=219771137]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.023529412, 0.023529412, 0.023529412, 0.12941177)
+
+[node name="Action" parent="Button" unique_id=1984348269 instance=ExtResource("5_p60b5")]
+layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -96.0
-offset_top = -27.916626
+offset_top = -61.0
 offset_right = 96.0
 offset_bottom = -36.0
 grow_horizontal = 2

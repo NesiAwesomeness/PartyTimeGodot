@@ -23,6 +23,7 @@ func on_mesh_entered():
 
 func on_mesh_exited():
 	modal.show()
+	modal.move_to_front()
 	print("Not in Mesh")
 
 func godot_callback(args):
@@ -67,15 +68,19 @@ func start_game(game_data : Dictionary):
 		print("Game Unavailable")
 		return
 	
-	var game_scene : GameScene = game_scenes[game_data.key].instantiate()
-	add_child(game_scene)
-	game_scene.add_to_group("GameScene")
+	var game_scene : GameScene = get_node_or_null(game_data.key)
+	if not game_scene:
+		game_scene = game_scenes[game_data.key].instantiate()
+		add_child(game_scene)
+		game_scene.name = game_data.key
+		game_scene.add_to_group("GameScene")
+		#serve game...
+		game_scene.set_up(game_data)
 	
-	#serve game...
-	game_scene.set_up(game_data)
+	game_scene.game_closing = false
+	
 
 func update_game(data):
-	print("ummm, game state updated")
 	get_tree().call_group("GameScene", "on_game_state_update", data)
 
 #when the user presses the send button.
@@ -84,9 +89,10 @@ func send_game(_data):
 
 func on_game_close(_b):
 	#chill for half a second before deleting.
-	create_tween().tween_callback( get_tree().call_group.bind( 
-		"GameScene", "queue_free" ) ).set_delay( 0.16 )
-	create_tween().tween_callback( NetworkManager.close_game ).set_delay( 0.16 )
+	
+	create_tween().tween_callback( func(): 
+		get_tree().call_group( "GameScene", "close_game" )
+	).set_delay( 0.16 )
 
 static func send_data(message_name: String, payload : Dictionary):
 	var message_data = {"message": message_name, "data": payload }

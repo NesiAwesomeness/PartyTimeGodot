@@ -19,7 +19,7 @@ expand_margin_right = 16.0
 shadow_color = Color(0, 0, 0, 0.0627451)
 shadow_size = 8
 
-[node name="Hand" type="PanelContainer" unique_id=1093053303 node_paths=PackedStringArray("hand_container", "name_tag", "score_tag", "button", "summary", "summary_label")]
+[node name="Hand" type="PanelContainer" unique_id=1093053303 node_paths=PackedStringArray("hand_container", "name_tag", "score_tag", "button", "summary", "summary_label", "quick_time")]
 self_modulate = Color(1, 1, 1, 0)
 offset_right = 40.0
 offset_bottom = 40.0
@@ -31,6 +31,7 @@ score_tag = NodePath("NameTag/Score")
 button = NodePath("Button")
 summary = NodePath("Margin/Control")
 summary_label = NodePath("Margin/Control/MarginContainer/Label")
+quick_time = NodePath("NameTag/QuickTime")
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=1807607364]
 layout_mode = 2
@@ -39,17 +40,15 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="Hand" type="HBoxContainer" parent="Margin" unique_id=282532123]
+[node name="Hand" type="Control" parent="Margin" unique_id=1991201883]
 custom_minimum_size = Vector2(0, 128)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/separation = 48
-alignment = 2
 
 [node name="Control" type="Control" parent="Margin" unique_id=2133766808]
 visible = false
 layout_mode = 2
-size_flags_horizontal = 8
+size_flags_horizontal = 4
 
 [node name="MarginContainer" type="MarginContainer" parent="Margin/Control" unique_id=974672310]
 layout_mode = 1
@@ -128,6 +127,26 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_li78n")
 
+[node name="QuickTime" type="ProgressBar" parent="NameTag" unique_id=159501902]
+visible = false
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = 20.0
+offset_right = 100.0
+offset_bottom = 24.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
+value = 50.0
+show_percentage = false
+
 [node name="Button" type="Button" parent="." unique_id=316015903]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 flat = true

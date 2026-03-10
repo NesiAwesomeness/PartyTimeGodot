@@ -1,6 +1,9 @@
 [gd_scene format=3 uid="uid://bws57ngrxw5q1"]
 
+[ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="1_igcr6"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_kiktm"]
+font = ExtResource("1_igcr6")
 font_size = 20
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wecqu"]

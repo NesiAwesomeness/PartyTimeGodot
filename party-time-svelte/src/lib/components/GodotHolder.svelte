@@ -31,11 +31,7 @@
 	$: if (isGameOpen) {
 		joinSession();
 		gameStart();
-	} else {
-		leaveSession();
 	}
-
-	console.log(isGameOpen && isLoaded);
 
 	async function joinSession() {
 		console.log('hmmm');
@@ -124,22 +120,6 @@
 		listenToSignaling();
 	}
 
-	function leaveSession() {
-		if (myGodotId === 0) return;
-
-		// Remove myself from the chair
-		if (sessionRef) {
-			remove(sessionRef);
-			onDisconnect(sessionRef).cancel();
-		}
-
-		if (playersUnsub) playersUnsub();
-		if (signalingUnsub) signalingUnsub();
-		if (gameStateUnsub) gameStateUnsub();
-
-		myGodotId = 0;
-	}
-
 	function listenToSignaling() {
 		const signalRef = ref(
 			rtdb,
@@ -208,11 +188,6 @@
 		const message = event.data.message;
 		const payload = event.data.data;
 
-		if (!isGameOpen) {
-			if (message === 'send_game') sendGame(payload);
-			return;
-		}
-
 		if (!event.data) return;
 
 		if (event.data && event.data.type === 'GODOT_SIGNAL') {
@@ -241,7 +216,30 @@
 			case 'send_game':
 				sendGame(payload);
 				break;
+			case 'send_game':
+				sendGame(payload);
+				break;
+			case 'end_game':
+				console.log('closed from Godot');
+				leaveSession();
+				break;
 		}
+	}
+
+	function leaveSession() {
+		if (myGodotId === 0) return;
+
+		// Remove myself from the chair
+		if (sessionRef) {
+			remove(sessionRef);
+			onDisconnect(sessionRef).cancel();
+		}
+
+		if (playersUnsub) playersUnsub();
+		if (signalingUnsub) signalingUnsub();
+		if (gameStateUnsub) gameStateUnsub();
+
+		myGodotId = 0;
 	}
 
 	async function sendGame(gameData) {

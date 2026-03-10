@@ -4,10 +4,14 @@ extends Node
 var game_data : Dictionary
 var game_state : Dictionary
 
+var await_count : int = 0
+var game_closing = false
+
 func _ready():
 	NetworkManager.player_connected.connect(player_joined)
 	NetworkManager.player_disconnected.connect(player_exited)
-	NetworkManager.server_setup.connect(on_server_setup)
+	
+	NetworkManager.server_setup.connect( on_server_setup )
 
 func initialize_game() -> Dictionary:
 	print("There is not initialization for this game")
@@ -38,8 +42,38 @@ func has_cloud_authority() -> bool:
 	return NetworkManager.cloud_master_id != NetworkManager.my_peer_id 
 
 func on_set_up():
-	pass
 	#print("Not been told what to do with this: ", _game_data)
+	pass
+
+func on_await(decrement : bool):
+	await_count += -1 if decrement else 1
+	
+	print("the await count is ", await_count)
+	if game_closing:
+		close_game()
+
+func close_game():
+	game_closing = true
+	print("closing game await ", await_count)
+	#this half second will ensure that all rpc calls will happen before the player leaves.
+	if await_count == 0: get_tree().create_timer(0.5).timeout.connect( delete_game )
+
+func delete_game():
+	if game_closing and is_inside_tree():
+		NetworkManager.close_game()
+		cloud_save(game_state)
+		
+		GameManager.send_data("end_game", {})
+		queue_free()
+
+func cloud_save(change : Dictionary):
+	#cloud master saves to the cloud.
+	##you can add a cooldown here.
+	if not multiplayer.multiplayer_peer: return
+	
+	if has_cloud_authority():
+		GameManager.send_data("batch_update", change)
+		print("I'm the master noww and here's the update: ", change)
 
 #this just reconstructs the game data.
 func get_data(new_game_state : Dictionary):

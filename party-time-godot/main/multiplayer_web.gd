@@ -19,7 +19,6 @@ var cloud_master_id : int = -1
 
 func setup_network(id: int):
 	my_peer_id = id
-	
 	peer_to_uid[id] = GameManager.my_uid
 	
 	multiplayer_peer = WebRTCMultiplayerPeer.new()
@@ -33,12 +32,14 @@ func setup_network(id: int):
 			if cloud_master_id == multiplayer.get_unique_id():
 				#tell the new peer that I am the master.
 				rpc_id(i, "set_cloud_master", cloud_master_id)
+			
 			player_connected.emit(i)
 			
 			if not in_mesh:
 				in_mesh = true
 				mesh_entered.emit()
 	)
+	
 	multiplayer.peer_disconnected.connect(
 		func(i):
 			
@@ -62,6 +63,7 @@ func add_uid(incoming_uid):
 func set_cloud_master(new_master_id):
 	if cloud_master_id == multiplayer.get_unique_id():
 		if new_master_id > my_peer_id: return
+	
 	cloud_master_id = new_master_id
 	print("Acknowledged Master: ", cloud_master_id)
 
