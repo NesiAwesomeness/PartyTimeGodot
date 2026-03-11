@@ -33,8 +33,11 @@
 	let newRequest = false;
 	let requestUnsub = null;
 	let playgroundUnsub = null;
-	let modalOpen = false;
-	let searchModal = false;
+
+	let isSearching = false;
+
+	let signOutModal = false;
+	let addFriendModal = false;
 
 	function stopListening() {
 		if (requestUnsub) {
@@ -113,60 +116,9 @@
 		stopListening();
 	});
 
-	let searchName = '';
-	let isSearching = false;
 	let requestList = false;
-	let requestsLoadingStates = [];
-
-	async function handleSendRequest(e, index) {
-		if (!searchName) return;
-		searchName = e.currentTarget.previousElementSibling.textContent;
-
-		isSearching = true;
-		requestsLoadingStates[index] = true;
-		requestsLoadingStates = requestsLoadingStates;
-
-		try {
-			// 2. Query the 'users' collection where username == friendUsername
-			const usersRef = collection(db, 'users');
-			const q = query(usersRef, where('username', '==', searchName));
-
-			const querySnapshot = await getDocs(q);
-
-			// searchName = '';
-			isSearching = false;
-			requestsLoadingStates[index] = false;
-			requestsLoadingStates = requestsLoadingStates;
-
-			if (querySnapshot.empty) {
-				console.log('User not found!');
-				toast.error('User not found');
-				return;
-			}
-
-			const friendDoc = querySnapshot.docs[0];
-			const friendId = friendDoc.id;
-			const requestRef = doc(db, 'users', friendId, 'requests', $userStore.uid);
-
-			// Updates the requests that have been sent by the current user
-			requestsSent.update((current) => {
-				return [...current, searchName];
-			});
-
-			await setDoc(requestRef, {
-				username: $userStore.username,
-				timestamp: Date.now()
-			});
-
-			console.log('Request sent successfully to', searchName);
-			toast.success(`Request sent successfully to ${searchName}`);
-		} catch (error) {
-			console.error('Error sending request:', error);
-			isSearching = false;
-			requestsLoadingStates[index] = false;
-			requestsLoadingStates = requestsLoadingStates;
-		}
-	}
+	let searchName = '';
+	let friendName = '';
 
 	import { flip } from 'svelte/animate';
 	import { fly, fade } from 'svelte/transition';
@@ -250,30 +202,58 @@
 	import Loader from '$lib/components/Loader.svelte';
 	import { toast } from 'svelte-sonner';
 
-	let allUsers = [];
-	let friendsResult = [];
-	let isTypingSearch = false;
-
-	onMount(async () => {
-		const snapshot = await getDocs(collection(db, 'users'));
-		allUsers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-	});
+	$: friendsResult = $playgrounds;
 
 	function handleFindFriend(e) {
 		const friend = e.currentTarget.value.toLowerCase();
 		if (friend !== '') {
-			isTypingSearch = true;
+			isSearching = true;
 		} else {
-			isTypingSearch = false;
+			friendsResult = $playgrounds;
+			isSearching = false;
 		}
 
-		const allChats = $playgrounds.map(({ chatName }) => chatName);
+		friendsResult = $playgrounds.filter(({ chatName }) => chatName.toLowerCase().includes(friend));
+	}
 
-		friendsResult = allUsers
-			.filter(({ username }) => username != $userStore.username)
-			.filter(({ username }) => !allChats.includes(username))
-			.filter(({ username }) => username.toLowerCase().includes(friend))
-			.map((friend) => friend.username);
+	let isRequesting = false;
+
+	async function handleSendRequest() {
+		if (!friendName) return;
+
+		isRequesting = true;
+
+		try {
+			// 2. Query the 'users' collection where username == friendUsername
+			const usersRef = collection(db, 'users');
+			const q = query(usersRef, where('username', '==', friendName));
+
+			const querySnapshot = await getDocs(q);
+			const searchedName = friendName;
+
+			friendName = '';
+			isRequesting = false;
+
+			if (querySnapshot.empty) {
+				// use toast here...?
+				console.log('User not found!');
+				return;
+			}
+
+			const friendDoc = querySnapshot.docs[0];
+			const friendId = friendDoc.id;
+			const requestRef = doc(db, 'users', friendId, 'requests', $userStore.uid);
+
+			await setDoc(requestRef, {
+				username: $userStore.username,
+				timestamp: Date.now()
+			});
+
+			console.log('Request sent successfully to', searchedName);
+		} catch (error) {
+			console.error('Error sending request:', error);
+			isRequesting = false;
+		}
 	}
 
 	async function handleLogOut() {
@@ -285,18 +265,57 @@
 			console.error('Error signing out:', error.message);
 		}
 	}
+
+	// Modal state
+	let addGroupModal = false;
+
+	// Form state
+	let groupName = '';
+	let selectedChats = []; // Will hold the IDs of the selected chats
+
+	// Derived state: Filter out existing groups to only show individual friends
+	$: eligibleChats = $playgrounds.filter((chat) => !chat.isGroup);
+
+	// Validation: Must have a name and at least 2 people selected
+	$: canCreateGroup = groupName.trim() !== '' && selectedChats.length >= 2;
+
+	function toggleChatSelection(chatId) {
+		if (selectedChats.includes(chatId)) {
+			// Remove if already selected
+			selectedChats = selectedChats.filter((id) => id !== chatId);
+		} else {
+			// Add if not selected
+			selectedChats = [...selectedChats, chatId];
+		}
+	}
+
+	function handleCreateGroup() {
+		if (!canCreateGroup) return;
+
+		console.log('Creating group:', groupName, 'with members:', selectedChats);
+		// TODO: Add your Firebase group creation logic here
+
+		closeGroupModal();
+	}
+
+	function closeGroupModal() {
+		addGroupModal = false;
+		groupName = '';
+		selectedChats = [];
+	}
 </script>
 
 <svelte:window on:resize={handleResize} />
+
 <GodotHolder rect={$holderBounds} {isGameOpen} on:click={closeGame} />
 
 <div class="chat-page">
-	<Modal bind:isOpen={modalOpen} class="flex justify-center items-center">
+	<Modal bind:isOpen={signOutModal} class="flex justify-center items-center">
 		<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
 		<div class="flex justify-center items-center gap-[10px] mt-[30px]">
 			<button
 				on:click={() => {
-					modalOpen = false;
+					signOutModal = false;
 				}}
 				class="px-[16px] py-[2px] rounded-full bg-[white] text-black">No</button
 			>
@@ -306,65 +325,121 @@
 		</div>
 	</Modal>
 
-	<!-- Search Modal -->
-	<Modal
-		onClose={() => {
-			requestsLoadingStates = requestsLoadingStates.map((state) => (state = false));
-			searchName = '';
-			friendsResult = [];
-			isTypingSearch = false;
-		}}
-		bind:isOpen={searchModal}
-	>
-		<h3 class="mt-2 text-2xl">Find a friend</h3>
-		<!-- Container for searchbar and search icon -->
-		<div class="relative w-full bg-[#161616] rounded-md mt-4 px-5 py-3">
-			<img src={search} class="absolute center-y left-2 size-[14px]" alt="Search" />
-			<input
-				bind:value={searchName}
-				class="w-full focus:outline-none px-4"
-				name="search"
-				type="text"
-				disabled={isSearching}
-				placeholder="Search"
-				on:input={handleFindFriend}
-			/>
-		</div>
+	<Modal bind:isOpen={addFriendModal} class="flex justify-center items-center">
+		<div class="w-full max-w-[400px] p-4">
+			<div
+				class="relative flex items-center bg-[#161616] rounded-full p-1.5 pl-10 border border-white/10 focus-within:border-gray-500"
+			>
+				<input
+					bind:value={friendName}
+					class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
+					name="search"
+					type="text"
+					placeholder="Paste Username Here"
+					disabled={isRequesting}
+				/>
 
-		<!-- Container for search results -->
-		<div class="w-full min-h-[100px] mt-2">
-			{#if isTypingSearch}
-				{#if friendsResult.length != 0}
-					{#each friendsResult as friend, i}
-						<div
-							class="mt-2 rounded-sm flex justify-between items-center bg-[#161616]/70 py-2 px-4"
-						>
-							<p>{friend}</p>
-
-							{#if $requestsSent.includes(friend)}
-								<p class="text-sm text-white/60">Requested</p>
-							{:else}
-								<button
-									on:click={(e) => {
-										handleSendRequest(e, i);
-									}}
-									class="text-sm text-white/60"
-								>
-									{#if requestsLoadingStates[i]}
-										<Loader size={20} />
-									{:else}
-										Send request
-									{/if}</button
-								>
-							{/if}
-						</div>
-					{/each}
-				{:else}
-					<p class="text-white/60 text-sm italic">Cannot find {searchName} {':('}</p>
-				{/if}
-			{/if}
+				<button
+					class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+					on:click={handleSendRequest}
+					disabled={isRequesting}
+				>
+					{#if isRequesting}
+						<span class="text-white text-xs">...</span>
+					{:else}
+						<img src={add} class="w-4 h-4" alt="Add Friend" />
+					{/if}
+				</button>
+			</div>
 		</div>
 	</Modal>
+
+	<Modal bind:isOpen={addGroupModal} class="flex justify-center items-center">
+		<div
+			class="w-full max-w-[400px] bg-[#1c1c1c] rounded-2xl p-5 flex flex-col gap-4 shadow-xl border border-white/5"
+		>
+			<div class="flex justify-between items-center">
+				<h2 class="text-white text-lg font-semibold">Create Group</h2>
+				<button
+					class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+					title="close"
+					on:click={closeGroupModal}
+				>
+					<svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
+					</svg>
+				</button>
+			</div>
+
+			<div
+				class="relative flex items-center bg-[#161616] rounded-xl p-2 border border-white/10 focus-within:border-gray-500"
+			>
+				<input
+					bind:value={groupName}
+					class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
+					type="text"
+					placeholder="Group Name"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-2 scrollbar-thin">
+				<span class="text-white/40 text-xs font-medium uppercase tracking-wider mb-1"
+					>Select Friends</span
+				>
+
+				{#each eligibleChats as chat (chat.id)}
+					<button
+						class="flex items-center justify-between p-3 rounded-xl border transition-all text-left
+                        {selectedChats.includes(chat.id)
+							? 'bg-white/10 border-gray-400'
+							: 'bg-[#161616] border-white/5 hover:border-white/20'}"
+						on:click={() => toggleChatSelection(chat.id)}
+					>
+						<span class="text-white text-sm font-medium">{chat.chatName}</span>
+
+						<div
+							class="w-5 h-5 rounded-full border flex items-center justify-center transition-colors
+                        {selectedChats.includes(chat.id)
+								? 'bg-gray-400 border-gray-400'
+								: 'border-white/20'}"
+						>
+							{#if selectedChats.includes(chat.id)}
+								<svg
+									class="w-3 h-3 text-[#161616]"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="3"
+										d="M5 13l4 4L19 7"
+									></path>
+								</svg>
+							{/if}
+						</div>
+					</button>
+				{:else}
+					<div class="text-white/30 text-sm text-center py-4">No friends available to add.</div>
+				{/each}
+			</div>
+
+			<button
+				class="mt-2 w-full bg-gray-200 text-[#161616] font-bold text-sm h-10 rounded-xl flex items-center justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors"
+				on:click={handleCreateGroup}
+				disabled={!canCreateGroup}
+			>
+				Create Group
+			</button>
+		</div>
+	</Modal>
+
 	<div class="chat-page-wrapper">
 		{#if $userStore.uid === ''}
 			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size={64} /></div>
@@ -372,7 +447,16 @@
 			<div class="chat-view">
 				<div class="friend-seek-wrapper box">
 					<div class="friend-seek">
-						<span></span>
+						<img src={search} class="icon" alt="Search" />
+						<input
+							bind:value={searchName}
+							class="search-bar"
+							name="search"
+							type="text"
+							placeholder="Search"
+							on:input={handleFindFriend}
+						/>
+
 						{#if requestList}
 							<RevealButton
 								src={close}
@@ -384,18 +468,9 @@
 							/>
 						{:else}
 							<RevealButton
-								src={add}
-								alt="Add Friend"
-								label="Add Friend"
-								on:click={() => {
-									searchModal = true;
-								}}
-							/>
-							<RevealButton
 								src={request}
 								alt="Requests"
-								label="Requests"
-								highlight={requestList}
+								label="Friends"
 								on:click={() => {
 									requestList = true;
 									$userStore.lastCheckedRequests = Date.now();
@@ -405,7 +480,8 @@
 					</div>
 					{#if requestList}
 						<div class="more-friends" in:fade={{ duration: 400, easing: quintInOut }}>
-							<button class="box"> Create GroupPlay </button>
+							<button class="box" on:click={() => (addFriendModal = true)}> Add Friend </button>
+							<button class="box" on:click={() => (addGroupModal = true)}> Create Group </button>
 							<span class="requests-label"> Requests </span>
 							<div class="requests">
 								{#each $requests as item (item.id)}
@@ -421,7 +497,7 @@
 					<div class="chat-list-wrapper">
 						<span class="chat-list-label">Playgrounds</span>
 						<div class="chat-list panel">
-							{#each $playgrounds as item, i (item.id)}
+							{#each friendsResult as item, i (item.id)}
 								<div
 									animate:flip={{ duration: 400 }}
 									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
@@ -440,7 +516,7 @@
 					<button
 						class="sign-out"
 						on:click={() => {
-							modalOpen = true;
+							signOutModal = true;
 						}}>Sign out</button
 					>
 				</div>
@@ -612,12 +688,9 @@
 
 	.friend-seek {
 		display: grid;
-		grid-template-columns: 1fr auto auto;
-
-		height: 24px;
+		grid-template-columns: auto 1fr auto auto;
 
 		align-items: center;
-
 		gap: 8px;
 	}
 
@@ -683,6 +756,11 @@
 		overflow: hidden;
 	}
 
+	.icon {
+		width: 20px;
+		height: 18px;
+	}
+
 	.panel {
 		box-shadow:
 			inset 0 0 4px rgba(255, 255, 255, 0.025),
@@ -696,11 +774,6 @@
 
 		width: 100%;
 		margin: 0;
-	}
-
-	.icon {
-		width: 20px;
-		height: 18px;
 	}
 
 	.game-options {
