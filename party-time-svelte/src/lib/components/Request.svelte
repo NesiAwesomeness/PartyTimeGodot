@@ -17,7 +17,6 @@
 		const timestamp = Date.now();
 
 		try {
-			// 1. CREATE YOUR PLAYGROUND (Auto-generates the Chat ID)
 			const myPlaygroundsRef = collection(db, 'users', userID, 'playgrounds');
 			const gameDocument = await addDoc(myPlaygroundsRef, {
 				chatName: request.username,
@@ -28,7 +27,7 @@
 
 			const chatID = gameDocument.id;
 
-			const requestRef = doc(db, 'users', $userStore.uid, 'requests', request.id);
+			const requestRef = doc(db, 'users', userID, 'requests', request.id);
 			await deleteDoc(requestRef);
 
 			const chatRef = ref(rtdb, `chats/${chatID}`);
@@ -56,6 +55,19 @@
 			console.error('Error accepting request:', error);
 		}
 	}
+
+	async function handleDeclineRequest() {
+		if (!$userStore || !$userStore.uid) return;
+
+		try {
+			const requestRef = doc(db, 'users', $userStore.uid, 'requests', request.id);
+			await deleteDoc(requestRef);
+
+			console.log('Successfully declined ', request.username, "'s request!");
+		} catch (error) {
+			console.error('Error declining request:', error);
+		}
+	}
 </script>
 
 <div class="w-full p-3 grid grid-cols-[1fr_auto_auto] box-border rounded-2xl bg-white/[0.078]">
@@ -77,6 +89,7 @@
 	</button>
 	<button
 		title="Reject"
+		on:click={handleDeclineRequest}
 		class="h-full p-0 bg-transparent border-none grid place-items-center gap-[2px] cursor-pointer after:content-[''] after:col-start-1 after:row-start-1 after:relative after:w-3 after:h-3 after:bg-white after:rounded-full after:z-0"
 	>
 		<svg

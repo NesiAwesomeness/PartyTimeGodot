@@ -1,7 +1,7 @@
 <script>
 	import { db, rtdb } from '$lib/firebase';
 	import { userStore } from '$lib/userData';
-	import { getDisplayTime, currentChat, playgrounds } from '$lib/appData';
+	import { getDisplayTime, currentChat, playgrounds, toDisplayName } from '$lib/appData';
 	import { onValue, ref } from 'firebase/database';
 	import { onDestroy, onMount } from 'svelte';
 	import { doc, updateDoc } from 'firebase/firestore';
@@ -102,7 +102,8 @@
 			? 'font-[800]'
 			: 'font-medium'}"
 	>
-		<span class="text-lg self-start truncate block min-w-0">{chatItem.chatName}</span>
+		<span class="text-lg self-start truncate block min-w-0">{toDisplayName(chatItem.chatName)}</span
+		>
 		<span class="my-1 p-0 pr-6 text-xs shrink-0 {unopened ? 'text-white' : 'text-white/[0.32]'}">
 			{timestamp}
 		</span>

@@ -1,6 +1,6 @@
 <script>
 	import { userStore } from '$lib/userData';
-	import { playgrounds, currentChat, requests, requestsSent } from '$lib/appData';
+	import { playgrounds, currentChat, requests, requestsSent, toDisplayName } from '$lib/appData';
 
 	import { onDestroy, onMount } from 'svelte';
 	import { games } from '$lib/appData';
@@ -44,6 +44,7 @@
 	let addFriendModal = false;
 
 	$: memberList = $currentChat?.members ? Object.values($currentChat.members) : [];
+	$: isGroup = $currentChat?.isGroup;
 
 	onMount(() => {
 		$currentChat = {
@@ -271,7 +272,6 @@
 		try {
 			await signOut(auth);
 			stopListening();
-			goto('/');
 		} catch (error) {
 			console.error('Error signing out:', error.message);
 		}
@@ -367,6 +367,8 @@
 		addGroupModal = false;
 		groupName = '';
 		selectedChats = [];
+
+		requestList = false;
 	}
 </script>
 
@@ -546,13 +548,19 @@
 						>
 							<button
 								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
-								on:click={() => (addFriendModal = true)}
+								on:click={() => {
+									requestList = false;
+									addFriendModal = true;
+								}}
 							>
 								Add Friend
 							</button>
 							<button
 								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
-								on:click={() => (addGroupModal = true)}
+								on:click={() => {
+									addGroupModal = true;
+									requestList = false;
+								}}
 							>
 								Create Group
 							</button>
@@ -638,15 +646,21 @@
 						<circle cx="12" cy="12" r="12" fill="rgba(255, 255, 255, 0.75)" />
 					</svg>
 
-					<p class="text-xl font-semibold w-full m-0 truncate">{$currentChat.chatName}</p>
+					<p class="text-xl font-semibold w-full m-0 truncate">
+						{toDisplayName($currentChat.chatName)}
+					</p>
 
-					<div
-						style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-right: 8px;"
-					>
-						{#each memberList as mem}
-							<span class="bg-[#454545] text-xs font-medium px-2 py-1 rounded-full">{mem}</span>
-						{/each}
-					</div>
+					{#if isGroup}
+						<div
+							style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-right: 8px;"
+						>
+							{#each memberList as mem}
+								<span class="bg-[#454545] text-xs font-medium px-2 py-1 rounded-full"
+									>@{mem.toLocaleLowerCase()}</span
+								>
+							{/each}
+						</div>
+					{/if}
 				</div>
 				<div
 					class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"

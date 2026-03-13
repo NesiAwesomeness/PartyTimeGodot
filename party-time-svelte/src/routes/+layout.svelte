@@ -8,35 +8,17 @@
 	import { userStore } from '$lib/userData';
 	import { goto } from '$app/navigation';
 	import '../app.css';
+	import { currentChat, playgrounds, requests } from '$lib/appData';
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
-			if (user) {
-				const userDocRef = doc(db, 'users', user.uid);
-				const userSnapshot = await getDoc(userDocRef);
+			console.log('Hello World!');
+			if (!user) {
+				goto('/');
 
-				if (userSnapshot.exists()) {
-					// Existing User: Update the store
-					$userStore = {
-						uid: user.uid,
-						...userSnapshot.data()
-					};
-				} else {
-					const newUserProfile = {
-						username: user.email.split('@')[0],
-						lastCheckedRequests: 0.0,
-						active: true
-					};
-					await setDoc(userDocRef, newUserProfile);
-
-					$userStore = {
-						uid: user.uid,
-						...newUserProfile
-					};
-				}
-
-				goto('/chat');
-			} else {
+				$userStore.username = '';
+				$playgrounds = [];
+				$requests = [];
 			}
 		});
 		return () => unsubscribe();
@@ -50,7 +32,7 @@
 </svelte:head>
 
 {@render children()}
-<Toaster richColors/>
+<Toaster richColors />
 
 <style>
 	:global(html),

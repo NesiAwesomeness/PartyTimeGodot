@@ -32,6 +32,10 @@ export const games = readable([
 	}
 ])
 
+export function toDisplayName(name) {
+	return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export function getDisplayTime(timestamp) {
 	const now = new Date();
 	// convert to milliseconds for now sha...
