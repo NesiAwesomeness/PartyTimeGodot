@@ -143,7 +143,7 @@ func on_set_up():
 func on_game_state_update( new_game_state ):
 	if not is_set_up: return
 	
-	print("Update")
+	get_tree().call_group("PassiveCard", "on_passive_update", new_game_state.passives[GameManager.my_uid])
 	
 	if not game_state.has("deck"):
 		end_game()
@@ -200,8 +200,6 @@ func on_game_state_update( new_game_state ):
 			shake_dist, speed).as_relative().set_trans(Tween.TRANS_SINE)
 			
 			quick_time_concluded.connect( func(): if jiggle_tween: jiggle_tween.kill() )
-		
-	get_tree().call_group("PassiveCard", "on_passive_update", new_game_state.passives[GameManager.my_uid])
 	
 	#replace other things.
 	game_state = new_game_state
@@ -332,7 +330,7 @@ func draw_card():
 		if randi() % 2 == 0:
 			var pool : Dictionary = POWERS.merged(PASSIVES)
 			var power_card = { "rank" : pool.keys().pick_random(), "suite" : "R" }
-			my_hand.append( power_card )
+			if not my_hand.has(power_card): my_hand.append( power_card )
 			print("I also got: ", power_card.rank, " from draw")
 		
 		last_card_source = "DRAW"
@@ -380,7 +378,6 @@ func on_power(player_name, power):
 		print("I can't use powers on ", player_name, " right now")
 		return
 	
-	
 	selected_player_name = ""
 	selected_power_up = ""
 	
@@ -391,14 +388,7 @@ func on_power(player_name, power):
 	
 	#remove card from my hand...
 	var my_hand : Array = game_state.hands[GameManager.my_uid]
-	my_hand = my_hand.filter(func(card): return card.rank != power)
-	#remove the card from your hand.
-	
-	var powers : Array = player_hand.filter(func(card): return card.rank == power)
-	
-	if not powers.is_empty():
-		powers.remove_at(0)
-		my_hand.append_array(powers)
+	my_hand.erase({ "rank" : power, "suite" : "R" })
 	
 	match power:
 		"magnifying_glass":
@@ -417,6 +407,8 @@ func on_power(player_name, power):
 				action_message(str("they have ", CARDS[display_rank].name, "!"))
 			else:
 				action_message("We have nothing in common")
+			
+			cloud_save({ "hands" : { GameManager.my_uid : my_hand } })
 			
 		"fast_hands":
 			var swap_rank : String = player_hand.filter(
@@ -448,9 +440,7 @@ func on_power(player_name, power):
 			print("I just took ", CARDS[swap_rank].name, " from ", player_name)
 			print("and gave them ", CARDS[our_swap].name)
 			
-			cloud_save({ "hands" : { player_id : player_hand } })
-	
-	cloud_save({ "hands" : { GameManager.my_uid : my_hand } })
+			cloud_save({ "hands" : { player_id : player_hand , GameManager.my_uid : my_hand } })
 	
 	print("I just used ", pool[power], " on ", player_name)
 

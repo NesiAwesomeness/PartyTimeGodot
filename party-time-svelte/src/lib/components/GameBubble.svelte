@@ -31,8 +31,9 @@
 	}
 
 	$: oppName = $currentChat.isGroup
-		? Object.values($currentChat.members)[gameData.playerTurn]
+		? Object.values($currentChat.members)[gameData.gameState.playerTurn]
 		: 'Them';
+
 	$: whoPlaying = fromYou ? oppName : 'You';
 	$: timestamp = getDisplayTime(gameData.timestamp);
 

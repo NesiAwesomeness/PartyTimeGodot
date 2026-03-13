@@ -31,13 +31,6 @@
 		where
 	} from 'firebase/firestore';
 
-	$: if ($userStore && $userStore.uid) {
-		fetchPlaygroundData($userStore.uid);
-		displayGameOptions();
-	} else {
-		stopListening();
-	}
-
 	let loading = true;
 	let username = 'Username';
 
@@ -49,6 +42,21 @@
 
 	let signOutModal = false;
 	let addFriendModal = false;
+
+	$: memberList = $currentChat?.members ? Object.values($currentChat.members) : [];
+
+	onMount(() => {
+		$currentChat = {
+			chatName: 'Playground Name',
+			id: ''
+		};
+
+		fetchPlaygroundData($userStore.uid);
+	});
+
+	onDestroy(() => {
+		stopListening();
+	});
 
 	function stopListening() {
 		if (requestUnsub) {
@@ -77,12 +85,16 @@
 			});
 
 			const requestsRef = collection(db, 'users', uid, 'requests');
+
 			requestUnsub = onSnapshot(requestsRef, (snapshot) => {
 				let tempItems = [];
 				snapshot.forEach((doc) => {
 					tempItems.push({ id: doc.id, ...doc.data() });
 				});
 				tempItems.sort((a, b) => b.timestamp - a.timestamp);
+				$requests = tempItems;
+
+				console.log('New Requests', tempItems);
 
 				const latestRequest = tempItems.reduce(
 					(max, request) => (request.timestamp > max.timestamp ? game : max),
@@ -91,7 +103,6 @@
 
 				newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
 				// Updates the requests received by the current user
-				$requests = tempItems;
 			});
 		}
 	}
@@ -110,22 +121,11 @@
 
 	let gameOptions = [];
 
-	onMount(() => {
-		$currentChat = {
-			chatName: 'Playground Name',
-			id: ''
-		};
-	});
-
 	$: if ($currentChat) displayGameOptions();
 
 	function displayGameOptions() {
 		gameOptions = $games;
 	}
-
-	onDestroy(() => {
-		stopListening();
-	});
 
 	let requestList = false;
 	let searchName = '';
@@ -639,6 +639,14 @@
 					</svg>
 
 					<p class="text-xl font-semibold w-full m-0 truncate">{$currentChat.chatName}</p>
+
+					<div
+						style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-right: 8px;"
+					>
+						{#each memberList as mem}
+							<span class="bg-[#454545] text-xs font-medium px-2 py-1 rounded-full">{mem}</span>
+						{/each}
+					</div>
 				</div>
 				<div
 					class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
@@ -647,19 +655,21 @@
 						class="flex flex-col-reverse p-2 gap-2 h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 						bind:this={chatContainer}
 					>
-						{#each $currentChat.gameArray as item, i (item.id)}
-							<div
-								animate:flip={{ duration: 400 }}
-								in:fly={{ y: 20, duration: 300, delay: i * 50 }}
-							>
-								<GameBubble gameData={item} id={item.id} on:click={openGame} />
-							</div>
-						{/each}
+						{#if $currentChat.members !== []}
+							{#each $currentChat.gameArray as item, i (item.id)}
+								<div
+									animate:flip={{ duration: 400 }}
+									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
+								>
+									<GameBubble gameData={item} id={item.id} on:click={openGame} />
+								</div>
+							{/each}
+						{/if}
 					</div>
 				</div>
 				{#if $currentChat.id != ''}
 					<div
-						class="w-full h-full flex flex-row gap-2 p-2 box-border rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.02),inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_32px_#212121,inset_0_0_32px_#212121,inset_0_0_64px_#212121,inset_0_0_128px_#212121] bg-[radial-gradient(circle,rgba(255,255,255,0.04)_1px,transparent_2px)] bg-[size:16px_16px] bg-[position:4px_0]"
+						class="w-full h-full flex flex-row gap-2 p-2 box-border rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.02),inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_32px_#212121,inset_0_0_32px_#212121,inset_0_0_64px_#212121,inset_0_0_128px_#212121] bg-[radial-gradient(circle,rgba(255,255,255,0.04)_0.5px,transparent_1.5px)] bg-[size:12px_12px] bg-[position:2px_0]"
 					>
 						{#each gameOptions as game (game.key)}
 							<GameOption {game} />
