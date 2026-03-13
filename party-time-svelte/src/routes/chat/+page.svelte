@@ -96,12 +96,12 @@
 
 				console.log('New Requests', tempItems);
 
-				const latestRequest = tempItems.reduce(
-					(max, request) => (request.timestamp > max.timestamp ? game : max),
-					{ timestamp: $userStore.lastCheckedRequests || 0 }
-				);
+				// const latestRequest = tempItems.reduce(
+				// 	(max, request) => (request.timestamp > max.timestamp ? game : max),
+				// 	{ timestamp: $userStore.lastCheckedRequests || 0 }
+				// );
 
-				newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
+				// newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
 				// Updates the requests received by the current user
 			});
 		}
