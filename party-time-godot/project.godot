@@ -24,6 +24,10 @@ NetworkManager="*uid://mg0kamoxohuk"
 window/size/viewport_width=1280
 window/size/viewport_height=1280
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/minimize_html_build/plugin.cfg")
+
 [gui]
 
 theme/default_font_multichannel_signed_distance_field=true
