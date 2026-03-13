@@ -23,7 +23,7 @@
 		background-color: transparent;
 
 		display: flex;
-		gap: 2px;
+		gap: 8px;
 		align-items: center;
 
 		height: 100%;
@@ -44,7 +44,5 @@
 	.icon {
 		width: 20px;
 		height: 18px;
-
-		margin: 0 8px;
 	}
 </style>

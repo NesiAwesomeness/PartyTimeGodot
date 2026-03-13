@@ -20,6 +20,7 @@ modal = NodePath("Button")
 metadata/_custom_type_script = "uid://c5blqehapew3s"
 
 [node name="Button" type="Button" parent="." unique_id=1860866691]
+visible = false
 z_index = 10
 z_as_relative = false
 anchors_preset = 15
@@ -31,6 +32,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_p60b5")
 flat = true
 
 [node name="ColorRect" type="ColorRect" parent="Button" unique_id=219771137]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

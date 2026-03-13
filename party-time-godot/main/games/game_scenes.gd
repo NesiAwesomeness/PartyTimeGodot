@@ -66,14 +66,33 @@ func delete_game():
 		GameManager.send_data("end_game", {})
 		queue_free()
 
-func cloud_save(change : Dictionary):
-	#cloud master saves to the cloud.
-	##you can add a cooldown here.
-	if not multiplayer.multiplayer_peer: return
+var _pending_cloud_data : Dictionary = {}
+var _is_save_queued : bool = false
+
+func cloud_save(change : Dictionary) -> void:
+	# Deep merge the new change into our pending data dictionary
+	_deep_merge(_pending_cloud_data, change)
 	
-	if has_cloud_authority():
-		GameManager.send_data("batch_update", change)
-		print("I'm the master noww and here's the update: ", change)
+	if not _is_save_queued:
+		_is_save_queued = true
+		_execute_batched_save.call_deferred()
+
+func _execute_batched_save() -> void:
+	if not _pending_cloud_data.is_empty():
+		GameManager.send_data("batch_update", _pending_cloud_data)
+		print("Batched Save Executed!")
+		_pending_cloud_data.clear()
+	_is_save_queued = false
+
+func _deep_merge(target : Dictionary, source : Dictionary) -> void:
+	for key in source:
+		if target.has(key) and typeof(target[key]) == TYPE_DICTIONARY and typeof(source[key]) == TYPE_DICTIONARY:
+			_deep_merge(target[key], source[key])
+		else:
+			
+			if typeof(source[key]) == TYPE_DICTIONARY or typeof(source[key]) == TYPE_ARRAY:
+				target[key] = source[key].duplicate(true)
+			else: target[key] = source[key]
 
 #this just reconstructs the game data.
 func get_data(new_game_state : Dictionary):

@@ -18,12 +18,12 @@ func _ready():
 	NetworkManager.mesh_exited.connect(on_mesh_exited)
 
 func on_mesh_entered():
-	modal.hide()
+	#modal.hide()
 	print("In Mesh")
 
 func on_mesh_exited():
-	modal.show()
-	modal.move_to_front()
+	#modal.show()
+	#modal.move_to_front()
 	print("Not in Mesh")
 
 func godot_callback(args):

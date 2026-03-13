@@ -312,27 +312,32 @@
 <svelte:window on:message={pullGodot} />
 
 <div
-	class="godot-holder"
-	class:opened={isGameOpen}
+	class="absolute grid grid-cols-1 items-center border-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden box-border {isGameOpen
+		? 'z-[2] pointer-events-auto'
+		: 'z-0 pointer-events-none'}"
 	style="
-	left: {rect.x}px;
-	top: {rect.y}px;
-	width: {rect.w}px;
-	height: {rect.h}px;
-	opacity: {rect.o};
-	border-radius: {rect.r}px;
+    left: {rect.x}px;
+    top: {rect.y}px;
+    width: {rect.w}px;
+    height: {rect.h}px;
+    opacity: {rect.o};
+    border-radius: {rect.r}px;
 "
 >
 	<iframe
 		bind:this={iframeGodot}
+		class="col-start-1 row-start-1 border-none w-full h-full"
 		src="/godot-build/index.html"
 		title="Godot Game"
 		on:load={() => (isLoaded = true)}
 	>
 	</iframe>
-	<div class="buttons">
+	<div
+		class="col-start-1 row-start-1 flex absolute flex-col justify-self-end justify-between h-[calc(100vh-72px)] m-[36px]"
+	>
 		<button
 			title="Close Game"
+			class="[z-index:inherit] box-border rounded-full p-0 w-[42px] min-h-[42px] h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
 			on:click={() => {
 				closeGame();
 				dispatch('click');
@@ -353,68 +358,3 @@
 		</button>
 	</div>
 </div>
-
-<style>
-	.godot-holder > iframe,
-	.buttons {
-		grid-area: 1 / 1;
-	}
-
-	.buttons {
-		display: flex;
-		position: absolute;
-
-		flex-direction: column;
-		justify-self: end;
-
-		justify-content: space-between;
-
-		height: calc(100vh - 72px);
-		margin: 36px;
-	}
-
-	button {
-		z-index: inherit;
-		height: fit-content;
-		box-sizing: border-box;
-
-		border-radius: 50%;
-		padding: 0;
-
-		width: 42px;
-		min-height: 42px;
-		height: 42px;
-
-		border: none;
-		cursor: pointer;
-	}
-
-	.godot-holder {
-		position: absolute;
-
-		display: grid;
-		grid-template-columns: 1fr;
-		align-items: center;
-
-		border: none;
-		pointer-events: none;
-
-		overflow: hidden;
-		scrollbar-width: none;
-		z-index: 0;
-
-		box-sizing: border-box;
-	}
-
-	.godot-holder.opened {
-		z-index: 2;
-		overflow: hidden;
-		pointer-events: auto;
-	}
-
-	iframe {
-		border: none;
-		width: 100%;
-		height: 100%;
-	}
-</style>

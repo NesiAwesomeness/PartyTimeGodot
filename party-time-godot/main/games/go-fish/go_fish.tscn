@@ -21,10 +21,10 @@ shadow_size = 8
 font = ExtResource("4_5ubho")
 font_size = 24
 
-[node name="GoFish" type="Node" unique_id=1464147714 node_paths=PackedStringArray("players_node", "my_hand_node", "ask_panel", "request_label", "action_labels", "status_label")]
+[node name="GoFish" type="Node" unique_id=1464147714 node_paths=PackedStringArray("player_nodes", "my_hand_node", "ask_panel", "request_label", "action_labels", "status_label")]
 script = ExtResource("1_6o1i6")
 hand_scene = ExtResource("2_rcvgb")
-players_node = NodePath("CenterContainer/Opps")
+player_nodes = NodePath("CenterContainer/Opps")
 my_hand_node = NodePath("Me/Hand")
 ask_panel = NodePath("AskPanel/Container/PanelContainer")
 request_label = NodePath("AskPanel/Container/PanelContainer/MarginContainer/HBoxContainer/Ask")
@@ -115,21 +115,22 @@ visible = false
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=12555329]
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 175.0
-offset_bottom = 175.0
+offset_top = 120.0
+offset_bottom = 120.0
 grow_horizontal = 2
 
 [node name="Opps" type="HBoxContainer" parent="CenterContainer" unique_id=538092638]
 layout_mode = 2
+theme_override_constants/separation = 32
 
 [node name="Action" parent="." unique_id=1984348269 instance=ExtResource("3_wecqu")]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -46.5
-offset_top = 64.0
+offset_top = 32.0
 offset_right = 46.5
-offset_bottom = 91.916664
+offset_bottom = 59.916664
 grow_horizontal = 2
 text = "Your turn"
 

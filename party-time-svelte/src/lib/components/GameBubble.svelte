@@ -49,125 +49,32 @@
 		setGame();
 		dispatch('click', bubble);
 	}}
-	class="game-bubble"
-	style="
-	flex-direction: row{fromYou ? '-reverse' : ''};
-	border-radius: 16px 16px {fromYou ? 8 : 16}px {fromYou ? 16 : 8}px;
-	"
+	class="flex w-full aspect-[100/40] max-h-[160px] min-w-[240px] cursor-pointer font-['Funnel_Display',sans-serif] bg-black/[0.135] border-none p-0 {fromYou
+		? 'flex-row-reverse rounded-t-2xl rounded-bl-2xl rounded-br-lg'
+		: 'flex-row rounded-t-2xl rounded-bl-lg rounded-br-2xl'}"
 >
 	<div
 		bind:this={bubble}
-		class="preview"
-		style="border-radius: 16px 16px {fromYou ? 8 : 16}px {fromYou ? 16 : 8}px;"
+		class="bg-[#171717] h-full aspect-[100/80] max-w-[200px] z-[1] {fromYou
+			? 'rounded-t-2xl rounded-bl-2xl rounded-br-lg'
+			: 'rounded-t-2xl rounded-bl-lg rounded-br-2xl'}"
 	></div>
 	<div
-		class="game-info"
-		style="
-		left: {fromYou ? '' : '-'}24px;
-		padding-{fromYou ? 'right' : 'left'}: 42px;"
+		class="flex flex-col relative gap-1 h-full min-w-[160px] max-w-[180px] p-4 box-border text-white/[0.527] bg-[#111111] rounded-xl {fromYou
+			? 'left-6 pr-[42px]'
+			: '-left-6 pl-[42px]'}"
 	>
-		<span class="timestamp">{timestamp}</span>
+		<span class="text-xs w-fit m-0">{timestamp}</span>
 		<span
-			class="member"
-			style="background-color:{fromYou ? 'rgb(69, 69, 69)' : 'rgb(203, 68, 68)'};"
-			>{whoPlaying}</span
+			class="rounded-2xl w-fit px-2 font-medium text-xs text-white {fromYou
+				? 'bg-[#454545]'
+				: 'bg-[#cb4444]'}">{whoPlaying}</span
 		>
-		<div class="game-title">
-			<span class="game-name">{gameData.name}</span>
+		<div class="grid content-end h-full min-w-[90px] font-semibold text-xl text-white/[0.815]">
+			<span class="w-fit">{gameData.name}</span>
 			{#if isRoundPlay}
-				<span class="game-round">Round {gameData.gameState.round}</span>
+				<span class="text-base w-fit">Round {gameData.gameState.round}</span>
 			{/if}
 		</div>
 	</div>
 </button>
-
-<style>
-	.preview {
-		background-color: rgb(23, 23, 23);
-
-		height: 100%;
-		aspect-ratio: 100 / 80;
-
-		max-width: 200px;
-
-		z-index: 1;
-	}
-
-	.timestamp {
-		font-size: 0.75rem;
-		width: fit-content;
-		margin: 0;
-	}
-
-	.member {
-		background-color: rgb(203, 68, 68);
-		border-radius: 16px;
-		width: fit-content;
-
-		padding: 0 8px;
-
-		font-weight: 500;
-		font-size: 0.75rem;
-
-		color: white;
-	}
-
-	.game-title {
-		display: grid;
-		align-content: end;
-
-		height: 100%;
-		min-width: 90px;
-
-		font-weight: 600;
-		font-size: 1.25rem;
-		color: rgba(255, 255, 255, 0.815);
-	}
-
-	.game-title span {
-		width: fit-content;
-	}
-
-	.game-round {
-		font-size: 1rem;
-	}
-
-	.game-info {
-		display: flex;
-		flex-direction: column;
-
-		position: relative;
-		gap: 4px;
-
-		height: 100%;
-		min-width: 160px;
-		max-width: 180px;
-
-		padding: 16px;
-		box-sizing: border-box;
-
-		color: rgba(255, 255, 255, 0.527);
-		background-color: rgb(17, 17, 17);
-
-		border-radius: 12px;
-	}
-
-	.game-bubble {
-		display: flex;
-
-		width: 100%;
-		aspect-ratio: 100 / 40;
-		max-height: 160px;
-
-		min-width: 240px;
-
-		cursor: pointer;
-
-		font-family: 'Funnel Display', sans-serif;
-
-		background-color: rgba(0, 0, 0, 0.135);
-		border-radius: 12px;
-		border: none;
-		padding: 0;
-	}
-</style>

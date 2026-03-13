@@ -89,24 +89,28 @@
 </script>
 
 <button
-	class="chat"
+	class="w-full bg-transparent border-none p-0 text-left grid grid-cols-[auto_1fr] items-center text-white/[0.85] font-medium cursor-pointer overflow-hidden rounded-2xl"
 	on:click={() => {
 		if (chatItem.id != $currentChat.id) {
 			selectChat();
 		}
 	}}
 >
-	<div class="icon-placeholder"></div>
+	<div class="w-12 h-12 bg-white/[0.63] rounded-full m-3 shrink-0"></div>
 	<div
-		class="chat-info"
-		style="
-		font-weight: {unopened ? 800 : 500};"
+		class="grid grid-flow-row grid-cols-[1fr_auto] h-full gap-y-[2px] content-center border-b-2 border-white/[0.04] min-w-0 {unopened
+			? 'font-[800]'
+			: 'font-medium'}"
 	>
-		<span class="username">{chatItem.chatName}</span>
-		<span class="timestamp" style="color: {unopened ? '#ffffff' : 'rgba(255, 255, 255, 0.32)'};"
-			>{timestamp}</span
+		<span class="text-lg self-start truncate block min-w-0">{chatItem.chatName}</span>
+		<span class="my-1 p-0 pr-6 text-xs shrink-0 {unopened ? 'text-white' : 'text-white/[0.32]'}">
+			{timestamp}
+		</span>
+		<span
+			class="text-xs grid grid-flow-col gap-1 w-fit items-center py-1 px-2 rounded-lg bg-[#161616]/40 m-0 {unopened
+				? 'text-white'
+				: 'text-white/[0.32]'}"
 		>
-		<span class="game-type" style="color: {unopened ? '#ffffff' : 'rgba(255, 255, 255, 0.32)'};">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 12 12"
@@ -115,7 +119,6 @@
 				fill="rgb(203, 68, 68)"
 				stroke-linecap="round"
 				stroke-linejoin="round"
-				class="svg-circle"
 			>
 				<circle cx="6" cy="6" r="5"></circle>
 			</svg>
@@ -124,74 +127,3 @@
 		</span>
 	</div>
 </button>
-
-<style>
-	.chat {
-		all: unset;
-		display: grid;
-		grid-template-columns: auto 1fr;
-
-		align-items: center;
-
-		color: rgba(255, 255, 255, 0.849);
-		font-weight: 500;
-		cursor: pointer;
-
-		width: 100%;
-
-		overflow: hidden;
-		border-radius: 16px;
-	}
-
-	.username {
-		font-size: 1.125rem;
-		align-self: flex-start;
-	}
-
-	.chat-info {
-		display: grid;
-		grid-auto-flow: row;
-		grid-template-columns: 1fr auto;
-
-		height: 100%;
-		gap: 2px 0;
-
-		align-content: center;
-		border-bottom: 2px solid rgba(255, 255, 255, 0.04);
-	}
-
-	.game-type {
-		font-size: 0.75rem;
-		display: grid;
-		grid-auto-flow: column;
-		gap: 4px;
-
-		width: fit-content;
-
-		align-items: center;
-
-		padding: 4px 8px;
-		border-radius: 8px;
-
-		background-color: rgba(22, 22, 22, 0.4);
-		margin: 0;
-	}
-
-	.timestamp {
-		margin: 4px 0;
-		padding: 0;
-		padding-right: 24px;
-
-		font-size: 0.75rem;
-	}
-
-	.icon-placeholder {
-		width: 48px;
-		height: 48px;
-
-		background-color: rgba(255, 255, 255, 0.63);
-		border-radius: 999px;
-
-		margin: 12px;
-	}
-</style>

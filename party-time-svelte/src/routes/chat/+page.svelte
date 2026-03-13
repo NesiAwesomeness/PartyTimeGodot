@@ -17,8 +17,19 @@
 	import Request from '$lib/components/Request.svelte';
 
 	import { goto } from '$app/navigation';
-	import { auth, db } from '$lib/firebase';
-	import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
+	import { auth, db, rtdb } from '$lib/firebase';
+	import { get, ref, set } from 'firebase/database';
+
+	import {
+		addDoc,
+		collection,
+		doc,
+		getDocs,
+		onSnapshot,
+		query,
+		setDoc,
+		where
+	} from 'firebase/firestore';
 
 	$: if ($userStore && $userStore.uid) {
 		fetchPlaygroundData($userStore.uid);
@@ -271,7 +282,7 @@
 
 	// Form state
 	let groupName = '';
-	let selectedChats = []; // Will hold the IDs of the selected chats
+	let selectedChats = [];
 
 	// Derived state: Filter out existing groups to only show individual friends
 	$: eligibleChats = $playgrounds.filter((chat) => !chat.isGroup);
@@ -289,13 +300,67 @@
 		}
 	}
 
-	function handleCreateGroup() {
-		if (!canCreateGroup) return;
+	async function handleCreateGroup() {
+		if (!canCreateGroup || !$userStore || !$userStore.uid) return;
 
-		console.log('Creating group:', groupName, 'with members:', selectedChats);
-		// TODO: Add your Firebase group creation logic here
+		const userID = $userStore.uid;
+		const myUsername = $userStore.username;
+		const timestamp = Date.now();
 
+		// Build group members dictionary
+		let groupMembers = { [userID]: myUsername };
+		let friendUserIds = []; // We need these for the fan-out
+
+		for (const chatId of selectedChats) {
+			const membersRef = ref(rtdb, `chats/${chatId}/members`);
+			const snapshot = await get(membersRef);
+
+			if (snapshot.exists()) {
+				const membersDict = snapshot.val();
+				const friendId = Object.keys(membersDict).find((id) => id !== userID);
+
+				if (friendId) {
+					groupMembers[friendId] = membersDict[friendId];
+					friendUserIds.push(friendId);
+				}
+			}
+		}
+
+		// Cache group name before clearing and hiding UI immediately
+		const finalGroupName = groupName;
 		closeGroupModal();
+
+		try {
+			// 1. Create document in my playgrounds (auto-generates the group ID)
+			const myPlaygroundsRef = collection(db, 'users', userID, 'playgrounds');
+			const groupData = {
+				chatName: finalGroupName,
+				creator: myUsername,
+				timestamp: timestamp,
+				isGroup: true,
+				lastOpened: 0.0
+			};
+
+			const gameDocument = await addDoc(myPlaygroundsRef, groupData);
+			const groupID = gameDocument.id;
+
+			// 2. Set up RTDB chat reference
+			const chatRef = ref(rtdb, `chats/${groupID}`);
+			await set(chatRef, {
+				games: { null: 0 }, // Equivalent to NULL_GAME
+				members: groupMembers
+			});
+
+			// 3. "Fan out" to all other members
+			for (const memberID of friendUserIds) {
+				const theirPlaygroundRef = doc(db, 'users', memberID, 'playgrounds', groupID);
+				await setDoc(theirPlaygroundRef, groupData);
+			}
+
+			console.log('Group created successfully:', groupID);
+		} catch (error) {
+			console.error('Error creating group:', error);
+		}
 	}
 
 	function closeGroupModal() {
@@ -309,108 +374,93 @@
 
 <GodotHolder rect={$holderBounds} {isGameOpen} on:click={closeGame} />
 
-<div class="chat-page">
-	<Modal bind:isOpen={signOutModal} class="flex justify-center items-center">
-		<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
-		<div class="flex justify-center items-center gap-[10px] mt-[30px]">
-			<button
-				on:click={() => {
-					signOutModal = false;
-				}}
-				class="px-[16px] py-[2px] rounded-full bg-[white] text-black">No</button
-			>
-			<button class="px-[16px] py-[2px] rounded-full bg-[#cb4444]" on:click={handleLogOut}
-				>Yes</button
-			>
-		</div>
-	</Modal>
-
-	<Modal bind:isOpen={addFriendModal} class="flex justify-center items-center">
-		<div class="w-full max-w-[400px] p-4">
-			<div
-				class="relative flex items-center bg-[#161616] rounded-full p-1.5 pl-10 border border-white/10 focus-within:border-gray-500"
-			>
-				<input
-					bind:value={friendName}
-					class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
-					name="search"
-					type="text"
-					placeholder="Paste Username Here"
-					disabled={isRequesting}
-				/>
-
-				<button
-					class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-					on:click={handleSendRequest}
-					disabled={isRequesting}
-				>
-					{#if isRequesting}
-						<span class="text-white text-xs">...</span>
-					{:else}
-						<img src={add} class="w-4 h-4" alt="Add Friend" />
-					{/if}
-				</button>
-			</div>
-		</div>
-	</Modal>
-
-	<Modal bind:isOpen={addGroupModal} class="flex justify-center items-center">
-		<div
-			class="w-full max-w-[400px] bg-[#1c1c1c] rounded-2xl p-5 flex flex-col gap-4 shadow-xl border border-white/5"
+<Modal bind:isOpen={signOutModal} class="flex justify-center items-center">
+	<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
+	<div class="flex justify-center items-center gap-[10px] mt-[30px]">
+		<button
+			on:click={() => {
+				signOutModal = false;
+			}}
+			class="px-[16px] py-[2px] rounded-full bg-[white] text-black">No</button
 		>
-			<div class="flex justify-between items-center">
-				<h2 class="text-white text-lg font-semibold">Create Group</h2>
-				<button
-					class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
-					title="close"
-					on:click={closeGroupModal}
-				>
-					<svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						></path>
-					</svg>
-				</button>
-			</div>
+		<button class="px-[16px] py-[2px] rounded-full bg-[#cb4444]" on:click={handleLogOut}>Yes</button
+		>
+	</div>
+</Modal>
+
+<Modal bind:isOpen={addFriendModal} class="flex justify-center items-center">
+	<div class="w-full max-w-[400px] p-4">
+		<div
+			class="relative flex items-center bg-[#161616] rounded-full p-1.5 pl-10 border border-white/10 focus-within:border-gray-500"
+		>
+			<input
+				bind:value={friendName}
+				class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
+				name="search"
+				type="text"
+				placeholder="Paste Username Here"
+				disabled={isRequesting}
+			/>
+
+			<button
+				class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+				on:click={handleSendRequest}
+				disabled={isRequesting}
+			>
+				{#if isRequesting}
+					<span class="text-white text-xs">...</span>
+				{:else}
+					<img src={add} class="w-4 h-4" alt="Add Friend" />
+				{/if}
+			</button>
+		</div>
+	</div>
+</Modal>
+
+<Modal bind:isOpen={addGroupModal} on:close={closeGroupModal}>
+	<div class="w-full max-w-[400px] flex flex-col gap-5 p-2 box-border">
+		<div class="flex justify-between items-center px-1">
+			<h2 class="text-white text-xl font-semibold m-0">Create Group</h2>
+		</div>
+
+		<div
+			class="relative flex items-center bg-[#161616] rounded-xl p-2.5 border border-white/10 focus-within:border-gray-500"
+		>
+			<input
+				bind:value={groupName}
+				class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
+				type="text"
+				placeholder="Group Name"
+			/>
+		</div>
+
+		<div class="flex flex-col gap-2">
+			<span class="text-white/40 text-xs font-medium uppercase tracking-wider px-1 mb-1"
+				>Select Friends</span
+			>
 
 			<div
-				class="relative flex items-center bg-[#161616] rounded-xl p-2 border border-white/10 focus-within:border-gray-500"
+				class="flex flex-col bg-[#161616] rounded-xl border border-white/10 max-h-[40vh] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full"
 			>
-				<input
-					bind:value={groupName}
-					class="flex-grow text-white text-sm h-8 bg-transparent focus:outline-none placeholder-white/30 px-2"
-					type="text"
-					placeholder="Group Name"
-				/>
-			</div>
-
-			<div class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-2 scrollbar-thin">
-				<span class="text-white/40 text-xs font-medium uppercase tracking-wider mb-1"
-					>Select Friends</span
-				>
-
 				{#each eligibleChats as chat (chat.id)}
 					<button
-						class="flex items-center justify-between p-3 rounded-xl border transition-all text-left
+						class="flex items-center justify-between p-3.5 transition-colors text-left cursor-pointer border-b border-white/5 last:border-b-0
                         {selectedChats.includes(chat.id)
-							? 'bg-white/10 border-gray-400'
-							: 'bg-[#161616] border-white/5 hover:border-white/20'}"
+							? 'bg-white/10'
+							: 'bg-transparent hover:bg-white/5'}"
 						on:click={() => toggleChatSelection(chat.id)}
 					>
 						<span class="text-white text-sm font-medium">{chat.chatName}</span>
 
 						<div
-							class="w-5 h-5 rounded-full border flex items-center justify-center transition-colors
+							class="w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0
                         {selectedChats.includes(chat.id)
 								? 'bg-gray-400 border-gray-400'
 								: 'border-white/20'}"
 						>
 							{#if selectedChats.includes(chat.id)}
 								<svg
-									class="w-3 h-3 text-[#161616]"
+									class="w-3.5 h-3.5 text-[#161616]"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
@@ -426,31 +476,42 @@
 						</div>
 					</button>
 				{:else}
-					<div class="text-white/30 text-sm text-center py-4">No friends available to add.</div>
+					<div class="text-white/30 text-sm text-center py-6">No friends available to add.</div>
 				{/each}
 			</div>
-
-			<button
-				class="mt-2 w-full bg-gray-200 text-[#161616] font-bold text-sm h-10 rounded-xl flex items-center justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors"
-				on:click={handleCreateGroup}
-				disabled={!canCreateGroup}
-			>
-				Create Group
-			</button>
 		</div>
-	</Modal>
 
-	<div class="chat-page-wrapper">
+		<button
+			class="mt-1 w-full bg-gray-200 text-[#161616] font-bold text-sm h-11 rounded-xl flex items-center justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+			on:click={handleCreateGroup}
+			disabled={!canCreateGroup}
+		>
+			Create Group
+		</button>
+	</div>
+</Modal>
+
+<div class="absolute w-screen h-screen bg-[#1c1c1c]">
+	<!-- Custom aspect ratio AND max-width modifiers replacing portrait/landscape -->
+	<div
+		class="grid box-border gap-2 [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-flow-col [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-cols-[auto_1fr] [@media(max-width:649px),(max-aspect-ratio:4/5)]:grid-cols-1 w-full h-full p-2"
+	>
 		{#if $userStore.uid === ''}
-			<div class="flex justify-center items-center w-[100vw] h-[100vh]"><Loader size={64} /></div>
+			<div class="flex justify-center items-center w-screen h-screen"><Loader size={64} /></div>
 		{:else}
-			<div class="chat-view">
-				<div class="friend-seek-wrapper box">
-					<div class="friend-seek">
-						<img src={search} class="icon" alt="Search" />
+			<!-- Chat View -->
+			<div
+				class="grid grid-rows-[auto_1fr_48px] gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:max-w-[300px] h-full min-h-0 {$currentChat.id !=
+				''
+					? '[@media(max-width:649px),(max-aspect-ratio:4/5)]:hidden'
+					: ''}"
+			>
+				<div class="flex flex-col gap-3 p-3 bg-black/20 rounded-2xl overflow-hidden">
+					<div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2">
+						<img src={search} class="w-5 h-[18px]" alt="Search" />
 						<input
 							bind:value={searchName}
-							class="search-bar"
+							class="appearance-none bg-transparent text-white box-border w-full h-6 font-semibold text-xl focus:outline-none"
 							name="search"
 							type="text"
 							placeholder="Search"
@@ -479,24 +540,41 @@
 						{/if}
 					</div>
 					{#if requestList}
-						<div class="more-friends" in:fade={{ duration: 400, easing: quintInOut }}>
-							<button class="box" on:click={() => (addFriendModal = true)}> Add Friend </button>
-							<button class="box" on:click={() => (addGroupModal = true)}> Create Group </button>
-							<span class="requests-label"> Requests </span>
-							<div class="requests">
+						<div
+							class="my-2 flex flex-col gap-2 font-semibold"
+							in:fade={{ duration: 400, easing: quintInOut }}
+						>
+							<button
+								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
+								on:click={() => (addFriendModal = true)}
+							>
+								Add Friend
+							</button>
+							<button
+								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
+								on:click={() => (addGroupModal = true)}
+							>
+								Create Group
+							</button>
+							<span class="text-white/40"> Requests </span>
+							<div class="grid gap-2">
 								{#each $requests as item (item.id)}
 									<Request request={item} />
 								{:else}
-									<span class="none-label">No Requests</span>
+									<span class="text-white/20 p-4">No Requests</span>
 								{/each}
 							</div>
 						</div>
 					{/if}
 				</div>
-				<div class="box">
-					<div class="chat-list-wrapper">
-						<span class="chat-list-label">Playgrounds</span>
-						<div class="chat-list panel">
+				<div class="rounded-2xl overflow-hidden">
+					<div
+						class="flex flex-col h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					>
+						<span class="text-white/50 mx-3 mb-2 mt-0 font-medium">Playgrounds</span>
+						<div
+							class="p-0 m-0 grid gap-0.5 rounded-2xl bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
+						>
 							{#each friendsResult as item, i (item.id)}
 								<div
 									animate:flip={{ duration: 400 }}
@@ -505,34 +583,70 @@
 									<ChatItem chatItem={item} />
 								</div>
 							{:else}
-								<span class="none-label">No Playgrounds</span>
+								<span class="text-white/20 p-4">No Playgrounds</span>
 							{/each}
 						</div>
 					</div>
 				</div>
-				<div class="info panel box">
-					<div class="icon-placeholder"></div>
-					<p class="chat-title">{$userStore.username}</p>
+				<div
+					class="grid grid-cols-[auto_1fr_90px] gap-1 items-center px-1 text-white bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)] rounded-2xl overflow-hidden"
+				>
+					<div class="w-6 h-6 bg-white/75 rounded-full m-2 shrink-0"></div>
+					<p class="text-xl font-semibold w-full m-0 truncate">{$userStore.username}</p>
 					<button
-						class="sign-out"
+						class="appearance-none grid justify-center bg-[#cb4444] text-xs font-medium rounded-full m-2 p-1 cursor-pointer"
 						on:click={() => {
 							signOutModal = true;
 						}}>Sign out</button
 					>
 				</div>
 			</div>
+
+			<!-- Playground View -->
 			<div
-				class="playground-view"
+				class="grid gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:min-w-[360px] min-h-0 {$currentChat.id ==
+				''
+					? '[@media(max-width:649px),(max-aspect-ratio:4/5)]:hidden'
+					: ''}"
 				style="
-				grid-template-rows: 48px 1fr {$currentChat.id != '' ? '120px' : ''};
-			"
+                grid-template-rows: 48px 1fr {$currentChat.id != '' ? '120px' : ''};
+            "
 			>
-				<div class="info panel box">
-					<div class="icon-placeholder"></div>
-					<p class="chat-title">{$currentChat.chatName}</p>
+				<div
+					class="flex items-center px-1 text-white bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)] rounded-2xl overflow-hidden h-full"
+				>
+					<!-- Back Button -->
+					<button
+						title="back"
+						class="[@media(max-width:649px),(max-aspect-ratio:4/5)]:flex [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:hidden appearance-none bg-transparent border-none p-2 ml-1 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+						on:click={() => {
+							$currentChat = { chatName: 'Playground Name', id: '', gameArray: [] };
+						}}
+					>
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2.5"
+								d="M15 19l-7-7 7-7"
+							/>
+						</svg>
+					</button>
+
+					<!-- Replaced DIV with SVG Circle and added shrink-0 -->
+					<svg class="w-6 h-6 m-2 shrink-0" viewBox="0 0 24 24">
+						<circle cx="12" cy="12" r="12" fill="rgba(255, 255, 255, 0.75)" />
+					</svg>
+
+					<p class="text-xl font-semibold w-full m-0 truncate">{$currentChat.chatName}</p>
 				</div>
-				<div class="box panel">
-					<div class="plays" bind:this={chatContainer}>
+				<div
+					class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
+				>
+					<div
+						class="flex flex-col-reverse p-2 gap-2 h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+						bind:this={chatContainer}
+					>
 						{#each $currentChat.gameArray as item, i (item.id)}
 							<div
 								animate:flip={{ duration: 400 }}
@@ -544,7 +658,9 @@
 					</div>
 				</div>
 				{#if $currentChat.id != ''}
-					<div class="game-options panel box">
+					<div
+						class="w-full h-full flex flex-row gap-2 p-2 box-border rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.02),inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_32px_#212121,inset_0_0_32px_#212121,inset_0_0_64px_#212121,inset_0_0_128px_#212121] bg-[radial-gradient(circle,rgba(255,255,255,0.04)_1px,transparent_2px)] bg-[size:16px_16px] bg-[position:4px_0]"
+					>
 						{#each gameOptions as game (game.key)}
 							<GameOption {game} />
 						{/each}
@@ -554,250 +670,3 @@
 		{/if}
 	</div>
 </div>
-
-<style>
-	.none-label {
-		color: rgba(255, 255, 255, 0.2);
-		padding: 16px;
-	}
-
-	.chat-page {
-		position: absolute;
-		width: 100vw;
-		height: 100vh;
-
-		background-color: rgb(28, 28, 28);
-	}
-
-	.chat-page-wrapper {
-		display: grid;
-		box-sizing: border-box;
-		gap: 8px;
-
-		grid-auto-flow: column;
-		grid-template-columns: auto 1fr;
-
-		width: 100%;
-		height: 100%;
-
-		padding: 8px;
-	}
-
-	.chat-view {
-		display: grid;
-		grid-template-rows: auto 1fr 48px;
-		gap: 8px;
-
-		max-width: 300px;
-		height: 100%;
-
-		min-height: 0;
-	}
-
-	.chat-list {
-		padding: 0;
-		margin: 0;
-
-		display: grid;
-		gap: 2px;
-
-		border-radius: 16px;
-		background-color: rgba(255, 255, 255, 0.037);
-	}
-
-	.chat-list-wrapper {
-		display: flex;
-		flex-direction: column;
-
-		height: 100%;
-		box-sizing: border-box;
-
-		overflow: auto;
-
-		scrollbar-width: none;
-	}
-
-	.chat-list-label {
-		color: rgba(255, 255, 255, 0.498);
-		margin: 8px 12px;
-		margin-top: 0;
-
-		font-weight: 500;
-	}
-
-	.plays {
-		display: flex;
-		flex-direction: column-reverse;
-
-		padding: 8px;
-
-		gap: 8px;
-
-		height: 100%;
-		box-sizing: border-box;
-
-		overflow: auto;
-		scrollbar-width: none;
-	}
-
-	.playground-view {
-		display: grid;
-
-		gap: 8px;
-		min-width: 360px;
-		min-height: 0;
-	}
-
-	.sign-out {
-		all: unset;
-
-		display: grid;
-		justify-content: center;
-
-		background-color: rgb(203, 68, 68);
-		font-size: 0.75rem;
-		font-weight: 500;
-
-		font-family: inherit;
-
-		border-radius: 99px;
-
-		margin: 8px;
-		padding: 4px;
-		cursor: pointer;
-	}
-
-	.icon-placeholder {
-		width: 24px;
-		height: 24px;
-
-		background-color: rgba(255, 255, 255, 0.769);
-		border-radius: 999px;
-
-		margin: 8px;
-	}
-
-	.friend-seek-wrapper {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-
-		padding: 12px;
-		background-color: rgba(0, 0, 0, 0.2);
-	}
-
-	.friend-seek {
-		display: grid;
-		grid-template-columns: auto 1fr auto auto;
-
-		align-items: center;
-		gap: 8px;
-	}
-
-	.search-bar {
-		all: unset;
-		color: white;
-
-		box-sizing: border-box;
-
-		width: 100%;
-		height: 24px;
-
-		font-weight: 600;
-		font-size: 1.25rem;
-	}
-
-	.more-friends {
-		margin: 8px 0;
-		display: flex;
-		flex-direction: column;
-
-		gap: 8px;
-		font-weight: 600;
-	}
-
-	.more-friends button {
-		font-family: inherit;
-		padding: 12px;
-
-		border: none;
-		font-weight: 600;
-		font-size: 1rem;
-
-		color: rgba(255, 255, 255, 0.801);
-		background-color: rgb(78, 136, 170);
-		cursor: pointer;
-	}
-
-	.requests-label {
-		color: rgba(255, 255, 255, 0.425);
-	}
-
-	.requests {
-		display: grid;
-		gap: 8px;
-	}
-
-	.info {
-		display: grid;
-
-		grid-template-columns: auto 1fr 90px;
-		gap: 4px;
-
-		align-items: center;
-
-		padding: 0 4px;
-
-		color: white;
-	}
-
-	.box {
-		border-radius: 16px;
-		overflow: hidden;
-	}
-
-	.icon {
-		width: 20px;
-		height: 18px;
-	}
-
-	.panel {
-		box-shadow:
-			inset 0 0 4px rgba(255, 255, 255, 0.025),
-			inset 0 0 4px rgba(255, 255, 255, 0.02);
-		background-color: rgb(33, 33, 33);
-	}
-
-	.chat-title {
-		font-size: 1.25rem;
-		font-weight: 600;
-
-		width: 100%;
-		margin: 0;
-	}
-
-	.game-options {
-		box-shadow:
-			inset 0 0 4px rgba(255, 255, 255, 0.02),
-			inset 0 0 4px rgba(255, 255, 255, 0.025),
-			inset 0 0 32px rgb(33, 33, 33),
-			inset 0 0 32px rgb(33, 33, 33),
-			inset 0 0 64px rgb(33, 33, 33),
-			inset 0 0 128px rgb(33, 33, 33);
-
-		background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 2px);
-
-		background-size: 16px 16px;
-		background-position: 4px 0;
-
-		width: 100%;
-		height: 100%;
-
-		display: flex;
-		flex-direction: row;
-		gap: 8px;
-		padding: 8px;
-
-		box-sizing: border-box;
-	}
-</style>

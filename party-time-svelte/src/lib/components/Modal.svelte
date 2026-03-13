@@ -7,11 +7,11 @@
 	// Props
 	export let isOpen = false;
 	let className = '';
-	export let onClose;
 	export { className as class };
 
 	function close() {
 		isOpen = false;
+		dispatch('close');
 	}
 </script>
 
@@ -20,21 +20,18 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80"
-		on:click={() => {
-			close();
-			onClose();
-		}}
+		on:click={close}
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative w-full max-w-[400px] bg-[#212121] p-6 shadow-xl rounded-t-2xl sm:rounded-2xl {className}"
+			class="relative w-full max-w-[400px] bg-[#212121] p-6 shadow-xl rounded-2xl {className}"
 			on:click|stopPropagation
 			transition:fly={{ y: 100, duration: 400 }}
 		>
 			<button
 				aria-label="close"
 				on:click={close}
-				class="absolute right-4 top-4 text-xs font-medium text-white/60 hover:text-white tracking-wider"
+				class="absolute right-4 top-4 text-xs font-medium text-white/60 hover:text-white tracking-wider cursor-pointer"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
