@@ -5,7 +5,7 @@
 
 	async function newGame() {
 		if (app.currentChat.id === '') return;
-		game.setRequest(game.key);
+		game.setRequest(option.key);
 	}
 </script>
 

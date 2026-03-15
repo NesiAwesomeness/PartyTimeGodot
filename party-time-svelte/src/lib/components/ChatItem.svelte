@@ -1,7 +1,6 @@
 <script>
 	import { db, rtdb } from '$lib/firebase';
-	import { userStore } from '$lib/userData';
-	import { getDisplayTime, currentChat, toDisplayName } from '$lib/appData';
+	import { getDisplayTime, toDisplayName } from '$lib/appData';
 	import { onValue, ref } from 'firebase/database';
 	import { onDestroy, onMount } from 'svelte';
 	import { doc, updateDoc } from 'firebase/firestore';
@@ -34,7 +33,7 @@
 				const chatData = snapshot.val();
 
 				members = chatData.members;
-				playerIndex = Object.keys(members).indexOf($userStore.uid);
+				playerIndex = Object.keys(members).indexOf(app.uid);
 
 				gameArray = Object.entries(chatData.games)
 					.filter(([key, value]) => key !== 'null')

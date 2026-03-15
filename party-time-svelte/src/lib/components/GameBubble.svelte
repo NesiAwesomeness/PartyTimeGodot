@@ -1,6 +1,6 @@
 <script>
 	import { app } from '$lib/app.svelte';
-	import { getDisplayTime, currentGame } from '$lib/appData';
+	import { getDisplayTime } from '$lib/appData';
 	import { onMount } from 'svelte';
 
 	let bubble = null;

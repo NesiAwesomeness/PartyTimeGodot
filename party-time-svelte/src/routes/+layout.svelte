@@ -3,22 +3,28 @@
 	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 	import { auth, db, rtdb } from '$lib/firebase';
-	import { onAuthStateChanged } from 'firebase/auth';
 	import { addDoc, collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
-	import { userStore } from '$lib/userData';
 	import { goto } from '$app/navigation';
 	import '../app.css';
-	import { currentChat, playgrounds, requests, toDisplayName } from '$lib/appData';
 	import { app } from '$lib/app.svelte';
+	import { page } from '$app/state';
 
 	onMount(() => {
-		app.start();
+		app.init();
 	});
 
 	$effect(() => {
-		console.log(app.uid, 'from effect');
-	});
+		// Wait until Firebase has actually checked the user status
+		if (!app.isInitialized) return;
 
+		const isAtLoginScreen = page.url.pathname === '/';
+
+		if (app.uid && isAtLoginScreen) {
+			goto('/chat');
+		} else if (!app.uid && !isAtLoginScreen) {
+			goto('/');
+		}
+	});
 	let { children } = $props();
 </script>
 

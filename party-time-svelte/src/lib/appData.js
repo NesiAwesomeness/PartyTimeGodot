@@ -1,36 +1,11 @@
-import { get } from 'svelte/store';
-import { readable, writable } from 'svelte/store';
-
-// the game select sends to godot
-export const gameRequest = writable(null);
-
-export const playgrounds = writable([]);
-export const requests = writable([]);
-export const requestsSent = writable([])
-
-export const currentChat = writable({
-	chatName: "Playground Name",
-	id: "",
-	lastOpened: 0.0,
-	timestamp: 0.0,
-	gameArray: [],
-	playerIndex: -1,
-	members: { "sss": "dd" }
-});
-
-export const currentGame = writable({
-	id: "",
-	isTurnBased: false,
-	gameData: {},
-})
-
 // this is gameData
-export const games = readable([
+
+export const games = [
 	{
 		name: "Go Fish",
 		key: "GoFish",
 	}
-])
+]
 
 export function toDisplayName(name) {
 	return name.charAt(0).toUpperCase() + name.slice(1);

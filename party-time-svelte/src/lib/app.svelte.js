@@ -3,19 +3,20 @@ import { auth, db, rtdb } from "./firebase";
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
 import { goto } from "$app/navigation";
 import { toDisplayName } from "./appData";
-import { get, ref, set } from "firebase/database";
+import { ref, set } from "firebase/database";
 
 class appState {
 	loading = $state(true)
 	uid = $state('')
 	username = $state('')
+	isInitialized = $state(false);
 
 	playgrounds = $state([])
 	requests = $state([])
 	lastCheckedRequests = $state(0.0)
 
-	start() {
-		const unsubscribe = onAuthStateChanged(auth, async (user) => {
+	init() {
+		onAuthStateChanged(auth, async (user) => {
 			if (user) {
 				this.uid = user.uid
 				const userDocRef = doc(db, 'users', user.uid);
@@ -41,7 +42,6 @@ class appState {
 				this.lastCheckedRequests = userInfo.lastCheckedRequests
 				this.loading = false
 
-				goto("/chat")
 				this.fetchPlaygroundData()
 
 			} else {
@@ -52,9 +52,9 @@ class appState {
 				this.requests = [];
 
 				this.stopListening();
-				goto('/');
 			}
-		})
+			this.isInitialized = true;
+		});
 	}
 
 	#requestUnsub = null;
@@ -323,8 +323,6 @@ class gameState {
 	resetRequest() {
 		this.gameRequest = null;
 	}
-
-
 }
 
 export const game = new gameState();

@@ -24,7 +24,7 @@
 	let addFriendModal = $state(false);
 
 	let memberList = $derived(app.currentChat?.members ? Object.values(app.currentChat.members) : []);
-	let gameOptions = $derived(memberList.length > 1 ? $games : []);
+	let gameOptions = $derived(memberList.length > 1 ? games : []);
 	let isGroup = $derived(app.currentChat?.isGroup);
 
 	onMount(() => {
@@ -420,7 +420,7 @@
 					? '[@media(max-width:649px),(max-aspect-ratio:4/5)]:hidden'
 					: ''}"
 				style="
-                grid-template-rows: 48px 1fr {memberList == [] ? '120px' : ''};
+                grid-template-rows: 48px 1fr {app.currentChat.id != '' ? '120px' : ''};
             "
 			>
 				<div
@@ -465,7 +465,7 @@
 						</div>
 					{/if}
 				</div>
-				{#if memberList !== []}
+				{#if app.currentChat.members !== []}
 					<div
 						class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
 					>
@@ -473,16 +473,14 @@
 							class="flex flex-col-reverse p-2 gap-2 h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 							bind:this={chatContainer}
 						>
-							{#if memberList !== []}
-								{#each app.currentChat.gameArray as item, i (item.id)}
-									<div
-										animate:flip={{ duration: 400 }}
-										in:fly={{ y: 20, duration: 300, delay: i * 50 }}
-									>
-										<GameBubble gameData={item} id={item.id} on:click={openGame} />
-									</div>
-								{/each}
-							{/if}
+							{#each app.currentChat.gameArray as item, i (item.id)}
+								<div
+									animate:flip={{ duration: 400 }}
+									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
+								>
+									<GameBubble gameData={item} id={item.id} on:click={openGame} />
+								</div>
+							{/each}
 						</div>
 					</div>
 					{#if app.currentChat.id != ''}
@@ -494,8 +492,6 @@
 							{/each}
 						</div>
 					{/if}
-				{:else}
-					<Loader />
 				{/if}
 			</div>
 		{/if}

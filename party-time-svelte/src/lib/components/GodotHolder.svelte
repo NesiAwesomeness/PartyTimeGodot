@@ -12,7 +12,8 @@
 		update
 	} from 'firebase/database';
 
-	let isLoaded = false;
+	let isLoaded = $state(false);
+
 	let iframeGodot;
 
 	let { isGameOpen, rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
@@ -160,7 +161,7 @@
 	$effect(() => {
 		let members = {};
 
-		if (app.currentChat?.members) {
+		if (app.currentChat?.members && isLoaded) {
 			members = app.currentChat.members;
 			const memberIds = Object.keys(members);
 
@@ -171,11 +172,9 @@
 				myID: app.uid
 			});
 		}
-	});
 
-	$effect(() => {
-		if (game.gameRequest) {
-			pushGodot('initialize_game', app.gameRequest);
+		if (game.gameRequest && isLoaded) {
+			pushGodot('initialize_game', game.gameRequest);
 			game.resetRequest();
 		}
 	});
@@ -217,9 +216,6 @@
 				break;
 			case 'batch_update':
 				saveGameState(payload);
-				break;
-			case 'send_game':
-				sendGame(payload);
 				break;
 			case 'send_game':
 				sendGame(payload);
@@ -302,6 +298,7 @@
 	});
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { expect } from 'vitest';
 	const dispatch = createEventDispatcher();
 </script>
 
