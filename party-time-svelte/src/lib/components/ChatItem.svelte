@@ -1,25 +1,24 @@
 <script>
 	import { db, rtdb } from '$lib/firebase';
 	import { userStore } from '$lib/userData';
-	import { getDisplayTime, currentChat, playgrounds, toDisplayName } from '$lib/appData';
+	import { getDisplayTime, currentChat, toDisplayName } from '$lib/appData';
 	import { onValue, ref } from 'firebase/database';
 	import { onDestroy, onMount } from 'svelte';
 	import { doc, updateDoc } from 'firebase/firestore';
+	import { app } from '$lib/app.svelte';
 
-	export let chatItem = {
-		id: 'z',
-		timestamp: 0.0
-	};
+	let { chatItem } = $props();
+	let timestamp = $derived(getDisplayTime(chatItem.timestamp));
 
-	$: timestamp = getDisplayTime(chatItem.timestamp);
-	$: unopened = chatItem.timestamp > chatItem.lastOpened && chatItem.id != $currentChat.id;
+	let unopened = $derived(
+		chatItem.timestamp > chatItem.lastOpened && chatItem.id != app.currentChat.id
+	);
 
-	let currentUnsubscribe = null;
-
-	// just save this shit.
 	let gameArray = [];
 	let members = {};
 	let playerIndex = -1;
+
+	let currentUnsubscribe = null;
 
 	onMount(() => {
 		if (currentUnsubscribe) {
@@ -45,7 +44,7 @@
 
 				gameArray.sort((a, b) => b.timestamp - a.timestamp);
 
-				const latestGame = gameArray.reduce(
+				const latestGame = Object.entries(chatData.games).reduce(
 					(max, game) => (game.timestamp > max.timestamp ? game : max),
 					{ timestamp: chatItem.timestamp || 0 }
 				);
@@ -58,22 +57,22 @@
 				}
 			}
 
-			if ($currentChat.id === chatItem.id) {
+			if (app.currentChat.id === chatItem.id) {
 				selectChat();
 			}
 		});
 	});
 
 	async function updateTimestamp(time) {
-		const playgroundRef = doc(db, 'users', $userStore.uid, 'playgrounds', chatItem.id);
+		const playgroundRef = doc(db, 'users', app.uid, 'playgrounds', chatItem.id);
 		await updateDoc(playgroundRef, {
 			timestamp: time
 		});
 	}
 
 	async function selectChat() {
-		$currentChat = { ...$currentChat, ...chatItem, gameArray, playerIndex, members };
-		const playgroundRef = doc(db, 'users', $userStore.uid, 'playgrounds', chatItem.id);
+		app.setCurrentChat({ ...app.currentChat, ...chatItem, gameArray, playerIndex, members });
+		const playgroundRef = doc(db, 'users', app.uid, 'playgrounds', chatItem.id);
 
 		await updateDoc(playgroundRef, {
 			lastOpened: Date.now()
@@ -90,8 +89,8 @@
 
 <button
 	class="w-full bg-transparent border-none p-0 text-left grid grid-cols-[auto_1fr] items-center text-white/[0.85] font-medium cursor-pointer overflow-hidden rounded-2xl"
-	on:click={() => {
-		if (chatItem.id != $currentChat.id) {
+	onclick={() => {
+		if (chatItem.id != app.currentChat.id) {
 			selectChat();
 		}
 	}}

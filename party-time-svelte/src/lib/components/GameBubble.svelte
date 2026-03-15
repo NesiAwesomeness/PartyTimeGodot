@@ -1,53 +1,40 @@
 <script>
-	import { getDisplayTime, currentChat, currentGame } from '$lib/appData';
+	import { app } from '$lib/app.svelte';
+	import { getDisplayTime, currentGame } from '$lib/appData';
 	import { onMount } from 'svelte';
 
 	let bubble = null;
-	export let id = '';
+	let { id, gameData } = $props();
 
-	export let gameData = {
-		playerTurn: 0,
-		timestamp: 20.0
-	};
-
-	$: if (gameData) {
-		if ($currentGame.id === id) {
-			//set the game
-			setGame();
-		}
-	}
-
-	$: isTurnBased =
+	let isTurnBased = $derived(
 		Object.keys(gameData).includes('gameState') &&
-		Object.keys(gameData.gameState).includes('playerTurn');
+			Object.keys(gameData.gameState).includes('playerTurn')
+	);
 
-	$: isRoundPlay =
-		Object.keys(gameData).includes('gameState') &&
-		Object.keys(gameData.gameState).includes('round');
+	let isRoundPlay = $derived(
+		Object.keys(gameData).includes('gameState') && Object.keys(gameData.gameState).includes('round')
+	);
 
-	let fromYou = false;
-	$: if (isTurnBased) {
-		fromYou = gameData.gameState.playerTurn != $currentChat.playerIndex;
-	}
+	let fromYou = $derived(
+		isTurnBased ? gameData.gameState.playerTurn != app.currentChat.playerIndex : true
+	);
 
-	$: oppName = $currentChat.isGroup
-		? Object.values($currentChat.members)[gameData.gameState.playerTurn]
-		: 'Them';
+	let oppName = $derived(
+		app.currentChat.isGroup
+			? Object.values(app.currentChat.members)[gameData.gameState.playerTurn]
+			: 'Them'
+	);
 
-	$: whoPlaying = fromYou ? oppName : 'You';
-	$: timestamp = getDisplayTime(gameData.timestamp);
-
-	function setGame() {
-		$currentGame = { id, gameData, isTurnBased };
-	}
+	let whoPlaying = $derived(fromYou ? oppName : 'You');
+	let timestamp = $derived(getDisplayTime(gameData.timestamp));
 
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 </script>
 
 <button
-	on:click={() => {
-		setGame();
+	onclick={() => {
+		app.setGame({ id, gameData, isTurnBased });
 		dispatch('click', bubble);
 	}}
 	class="flex w-full aspect-[100/40] max-h-[160px] min-w-[240px] cursor-pointer font-['Funnel_Display',sans-serif] bg-black/[0.135] border-none p-0 {fromYou

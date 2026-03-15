@@ -1,7 +1,6 @@
 <script>
-	import { currentGame, currentChat, gameRequest } from '$lib/appData';
+	import { app, game } from '$lib/app.svelte';
 	import { rtdb } from '$lib/firebase';
-	import { userStore } from '$lib/userData';
 	import {
 		get,
 		onDisconnect,
@@ -10,14 +9,13 @@
 		ref,
 		remove,
 		runTransaction,
-		set,
 		update
 	} from 'firebase/database';
 
 	let isLoaded = false;
 	let iframeGodot;
 
-	export let isGameOpen = false;
+	let { isGameOpen, rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
 
 	let lastUpdated = 0.0;
 	let myGodotId = 0;
@@ -28,18 +26,20 @@
 	let signalingUnsub;
 	let gameStateUnsub;
 
-	$: if (isGameOpen) {
-		joinSession();
-		gameStart();
-	}
+	$effect(() => {
+		if (isGameOpen) {
+			joinSession();
+			gameStart();
+		}
+	});
 
 	async function joinSession() {
-		console.log('hmmm');
-		if (!$userStore.uid) return;
+		console.log('Joining Session');
+		if (!app.uid) return;
 
 		const playersRef = ref(
 			rtdb,
-			`chats/${$currentChat.id}/games/${$currentGame.id}/active_players`
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players`
 		);
 
 		// --- THE TRANSACTION (The "Ticket Booth") ---
@@ -47,7 +47,7 @@
 		const result = await runTransaction(playersRef, (currentData) => {
 			if (currentData === null) {
 				// Room is empty? Create it with me in slot 1
-				return { '1': $userStore.uid };
+				return { '1': app.uid };
 			}
 
 			// Room exists. Find first empty slot (1 to 32)
@@ -55,11 +55,11 @@
 				const slotKey = i.toString();
 				if (!currentData.hasOwnProperty(slotKey)) {
 					// Found empty slot! Sit here.
-					currentData[slotKey] = $userStore.uid;
+					currentData[slotKey] = app.uid;
 					return currentData;
 				}
 				// Edge case: Am I already in here? (Page reload)
-				if (currentData[slotKey] === $userStore.uid) {
+				if (currentData[slotKey] === app.uid) {
 					return undefined; // Abort transaction, I'm already in
 				}
 			}
@@ -70,7 +70,7 @@
 
 		if (result.committed) {
 			const data = result.snapshot.val();
-			const mySlot = Object.keys(data).find((key) => data[key] === $userStore.uid);
+			const mySlot = Object.keys(data).find((key) => data[key] === app.uid);
 
 			if (mySlot) {
 				myGodotId = parseInt(mySlot);
@@ -79,7 +79,7 @@
 				// 1. Set up Disconnect (If I close tab, free up my chair)
 				sessionRef = ref(
 					rtdb,
-					`chats/${$currentChat.id}/games/${$currentGame.id}/active_players/${myGodotId}`
+					`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${myGodotId}`
 				);
 				onDisconnect(sessionRef).remove();
 				setupGodotAndListeners();
@@ -88,7 +88,7 @@
 			const snapshot = await get(playersRef);
 			const data = snapshot.val();
 			if (data) {
-				const mySlot = Object.keys(data).find((key) => data[key] === $userStore.uid);
+				const mySlot = Object.keys(data).find((key) => data[key] === app.uid);
 				if (mySlot) {
 					myGodotId = parseInt(mySlot);
 					setupGodotAndListeners();
@@ -104,7 +104,7 @@
 		// Listen for other players
 		const allPlayersRef = ref(
 			rtdb,
-			`chats/${$currentChat.id}/games/${$currentGame.id}/active_players`
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players`
 		);
 
 		playersUnsub = onValue(allPlayersRef, (snapshot) => {
@@ -123,8 +123,9 @@
 	function listenToSignaling() {
 		const signalRef = ref(
 			rtdb,
-			`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${myGodotId}`
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${myGodotId}`
 		);
+
 		signalingUnsub = onValue(signalRef, (snapshot) => {
 			const data = snapshot.val();
 			if (data) {
@@ -133,18 +134,20 @@
 					remove(
 						ref(
 							rtdb,
-							`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${myGodotId}/${key}`
+							`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${myGodotId}/${key}`
 						)
 					);
 				});
 			}
 		});
 	}
-
 	// FIREBASE TO GODOT
 	function gameStart() {
-		pushGodot('start_game', $currentGame.gameData);
-		const gameStateRef = ref(rtdb, `chats/${$currentChat.id}/games/${$currentGame.id}/gameState/`);
+		pushGodot('start_game', app.currentGame.gameData);
+		const gameStateRef = ref(
+			rtdb,
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/gameState/`
+		);
 
 		gameStateUnsub = onValue(gameStateRef, (snapshot) => {
 			const gameState = snapshot.val();
@@ -154,26 +157,28 @@
 		});
 	}
 
-	$: if ($gameRequest) {
-		pushGodot('initialize_game', $gameRequest);
-		gameRequest.set(null);
-	}
-
-	$: if ($currentChat) {
+	$effect(() => {
 		let members = {};
 
-		if ($currentChat.members) {
-			members = $currentChat.members;
+		if (app.currentChat?.members) {
+			members = app.currentChat.members;
 			const memberIds = Object.keys(members);
 
 			pushGodot('update_chat', {
-				playerIndex: $currentChat.playerIndex,
+				playerIndex: app.currentChat.playerIndex,
 				memberCount: memberIds.length,
 				members,
-				myID: $userStore.uid
+				myID: app.uid
 			});
 		}
-	}
+	});
+
+	$effect(() => {
+		if (game.gameRequest) {
+			pushGodot('initialize_game', app.gameRequest);
+			game.resetRequest();
+		}
+	});
 
 	// SVELTE TO GODOT
 	function pushGodot(functionName, data) {
@@ -194,7 +199,7 @@
 			const { target, payload } = event.data.data;
 			const targetRef = ref(
 				rtdb,
-				`chats/${$currentChat.id}/games/${$currentGame.id}/signaling/${target}`
+				`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${target}`
 			);
 			push(targetRef, {
 				source_id: myGodotId,
@@ -243,7 +248,7 @@
 	}
 
 	async function sendGame(gameData) {
-		const chatRef = ref(rtdb, `chats/${$currentChat.id}/games`);
+		const chatRef = ref(rtdb, `chats/${app.currentChat.id}/games`);
 		const game = { ...gameData, timestamp: Date.now() };
 		console.log(game);
 
@@ -258,7 +263,7 @@
 		dataToSave.timestamp = Date.now();
 
 		try {
-			const gameRef = ref(rtdb, `chats/${$currentChat.id}/games/${dataToSave.id}`);
+			const gameRef = ref(rtdb, `chats/${app.currentChat.id}/games/${dataToSave.id}`);
 			await update(gameRef, dataToSave);
 		} catch (error) {
 			console.error('Failed to update game:', error);
@@ -267,7 +272,7 @@
 
 	async function saveGameState(payload) {
 		const updates = {};
-		const basePath = `chats/${$currentChat.id}/games/${$currentGame.id}/gameState`;
+		const basePath = `chats/${app.currentChat.id}/games/${app.currentGame.id}/gameState`;
 
 		for (const [category, data] of Object.entries(payload)) {
 			if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
@@ -298,15 +303,6 @@
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
-
-	export let rect = {
-		x: 0.0,
-		y: 0.0,
-		h: 1.0,
-		w: 1.0,
-		o: 0.0,
-		r: 0.0
-	};
 </script>
 
 <svelte:window on:message={pullGodot} />
@@ -329,7 +325,7 @@
 		class="col-start-1 row-start-1 border-none w-full h-full"
 		src="/godot-build/index.html"
 		title="Godot Game"
-		on:load={() => (isLoaded = true)}
+		onload={() => (isLoaded = true)}
 	>
 	</iframe>
 	<div
@@ -338,7 +334,7 @@
 		<button
 			title="Close Game"
 			class="[z-index:inherit] box-border rounded-full p-0 w-[42px] min-h-[42px] h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
-			on:click={() => {
+			onclick={() => {
 				closeGame();
 				dispatch('click');
 			}}

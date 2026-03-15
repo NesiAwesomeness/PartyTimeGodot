@@ -1,20 +1,17 @@
 <script>
-	import { auth, db } from '$lib/firebase';
+	import { auth } from '$lib/firebase';
 	import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-	import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-	import { userStore } from '$lib/userData';
-	import { playgrounds, currentChat, toDisplayName } from '$lib/appData';
 
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 
-	import Loader from '$lib/components/Loader.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import EyeOpen from '$lib/components/EyeOpen.svelte';
-	import EyeClosed from '$lib/components/EyeClosed.svelte';
+	import Loader from '$lib/interfaces/Loader.svelte';
+	import Modal from '$lib/interfaces/Modal.svelte';
+	import EyeOpen from '$lib/interfaces/EyeOpen.svelte';
+	import EyeClosed from '$lib/interfaces/EyeClosed.svelte';
 
+	let userName = '';
 	let password;
 	let isLoading = false;
 	let isSignin = true;
@@ -26,75 +23,29 @@
 		isLoading = true;
 
 		event.preventDefault();
-		signInWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
-			.then((userCredential) => {
-				handleNewUser(userCredential.user);
-			})
+		signInWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
+			.then(toast.success(`Welcome @${userName.toLowerCase()}!`))
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
 				if (errorMessage == 'Firebase: Error (auth/invalid-credential).') {
 					toast.error('Wrong Username or password :(');
 				}
-				isLoading = false;
-			});
+			})
+			.finally(() => (isLoading = false));
 	}
 
 	function handleRegister(event) {
 		isLoading = true;
 
 		event.preventDefault();
-		createUserWithEmailAndPassword(auth, `${$userStore.username}@partytime.test`, password)
-			.then((userCredential) => {
-				handleUser(userCredential.user);
-			})
+		createUserWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
+			.then(toast.success(`Welcome @${userName.toLowerCase()}!`))
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
-				isLoading = false;
-			});
-	}
-
-	async function handleUser(user) {
-		const userDocRef = doc(db, 'users', user.uid);
-		const userSnapshot = await getDoc(userDocRef);
-
-		const rawName = user.email.split('@')[0];
-
-		$userStore = {
-			uid: user.uid,
-			...userSnapshot.data()
-		};
-
-		$userStore.username = toDisplayName(rawName);
-		toast.success(`Welcome ${$userStore.username}!`);
-
-		goto('/chat');
-	}
-
-	async function handleNewUser(user) {
-		const rawName = user.email.split('@')[0];
-
-		$userStore.uid = user.uid;
-
-		const newUserProfile = {
-			username: rawName,
-			lastCheckedRequests: 0.0,
-			active: true
-		};
-
-		const userDocRef = doc(db, 'users', user.uid);
-		await setDoc(userDocRef, newUserProfile);
-
-		$userStore = {
-			uid: user.uid,
-			...newUserProfile
-		};
-
-		$userStore.username = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-		toast.success(`Welcome ${$userStore.username}!`);
-
-		goto('/chat');
+			})
+			.finally(() => (isLoading = false));
 	}
 </script>
 
@@ -117,7 +68,7 @@
 					type="text"
 					name="username"
 					placeholder="Username"
-					bind:value={$userStore.username}
+					bind:value={userName}
 					autocomplete="username"
 					required
 				/>

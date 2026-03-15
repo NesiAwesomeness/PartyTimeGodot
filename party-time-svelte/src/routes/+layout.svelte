@@ -4,24 +4,19 @@
 	import { onMount } from 'svelte';
 	import { auth, db, rtdb } from '$lib/firebase';
 	import { onAuthStateChanged } from 'firebase/auth';
-	import { addDoc, collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+	import { addDoc, collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 	import { userStore } from '$lib/userData';
 	import { goto } from '$app/navigation';
 	import '../app.css';
-	import { currentChat, playgrounds, requests } from '$lib/appData';
+	import { currentChat, playgrounds, requests, toDisplayName } from '$lib/appData';
+	import { app } from '$lib/app.svelte';
 
 	onMount(() => {
-		const unsubscribe = onAuthStateChanged(auth, async (user) => {
-			console.log('Hello World!');
-			if (!user) {
-				goto('/');
+		app.start();
+	});
 
-				$userStore.username = '';
-				$playgrounds = [];
-				$requests = [];
-			}
-		});
-		return () => unsubscribe();
+	$effect(() => {
+		console.log(app.uid, 'from effect');
 	});
 
 	let { children } = $props();

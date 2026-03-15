@@ -387,11 +387,13 @@ func on_power(player_name, power):
 	var player_hand : Array = game_state.hands[player_id]
 	
 	#remove card from my hand...
+	game_state.hands[GameManager.my_uid].erase({ "rank" : power, "suite" : "R" })
 	var my_hand : Array = game_state.hands[GameManager.my_uid]
-	my_hand.erase({ "rank" : power, "suite" : "R" })
 	
 	match power:
 		"magnifying_glass":
+			cloud_save({ "hands" : { GameManager.my_uid : my_hand } })
+			
 			var union : Array = my_hand.map(func(card): return card.rank).filter(
 				func(rank): return (player_hand.filter(
 #					filter the power cards from this person.
@@ -408,7 +410,6 @@ func on_power(player_name, power):
 			else:
 				action_message("We have nothing in common")
 			
-			cloud_save({ "hands" : { GameManager.my_uid : my_hand } })
 			
 		"fast_hands":
 			var swap_rank : String = player_hand.filter(

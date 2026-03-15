@@ -1,80 +1,13 @@
 <script>
-	import { db, rtdb } from '$lib/firebase';
-	import { userStore } from '$lib/userData';
-	import { ref, set } from 'firebase/database';
-	import { addDoc, collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
-
-	export let request = {
-		id: '',
-		username: 'John Pork'
-	};
-
-	async function handleAcceptRequest() {
-		if (!$userStore || !$userStore.uid) return;
-
-		const userID = $userStore.uid;
-		const myUsername = $userStore.username;
-		const timestamp = Date.now();
-
-		try {
-			const myPlaygroundsRef = collection(db, 'users', userID, 'playgrounds');
-			const gameDocument = await addDoc(myPlaygroundsRef, {
-				chatName: request.username,
-				timestamp: timestamp,
-				isGroup: false,
-				lastOpened: 0
-			});
-
-			const chatID = gameDocument.id;
-
-			const requestRef = doc(db, 'users', userID, 'requests', request.id);
-			await deleteDoc(requestRef);
-
-			const chatRef = ref(rtdb, `chats/${chatID}`);
-
-			const members = {};
-			members[userID] = myUsername;
-			members[request.id] = request.username;
-
-			const blank = { null: 0 };
-
-			await set(chatRef, {
-				games: blank,
-				members: members
-			});
-
-			const theirPlaygroundRef = doc(db, 'users', request.id, 'playgrounds', chatID);
-			await setDoc(theirPlaygroundRef, {
-				chatName: myUsername,
-				timestamp: timestamp,
-				isGroup: false,
-				lastOpened: 0
-			});
-			console.log('Successfully created chat room:', chatID);
-		} catch (error) {
-			console.error('Error accepting request:', error);
-		}
-	}
-
-	async function handleDeclineRequest() {
-		if (!$userStore || !$userStore.uid) return;
-
-		try {
-			const requestRef = doc(db, 'users', $userStore.uid, 'requests', request.id);
-			await deleteDoc(requestRef);
-
-			console.log('Successfully declined ', request.username, "'s request!");
-		} catch (error) {
-			console.error('Error declining request:', error);
-		}
-	}
+	import { app } from '$lib/app.svelte';
+	let { request } = $props();
 </script>
 
 <div class="w-full p-3 grid grid-cols-[1fr_auto_auto] box-border rounded-2xl bg-white/[0.078]">
 	<span class="text-white text-xl px-2 self-center">{request.username}</span>
 	<button
 		title="Accept"
-		on:click={handleAcceptRequest}
+		onclick={app.handleAcceptRequest(request)}
 		class="h-full p-0 bg-transparent border-none grid place-items-center gap-[2px] cursor-pointer after:content-[''] after:col-start-1 after:row-start-1 after:relative after:w-3 after:h-3 after:bg-white after:rounded-full after:z-0"
 	>
 		<svg
@@ -89,7 +22,7 @@
 	</button>
 	<button
 		title="Reject"
-		on:click={handleDeclineRequest}
+		onclick={app.handleDeclineRequest(request)}
 		class="h-full p-0 bg-transparent border-none grid place-items-center gap-[2px] cursor-pointer after:content-[''] after:col-start-1 after:row-start-1 after:relative after:w-3 after:h-3 after:bg-white after:rounded-full after:z-0"
 	>
 		<svg

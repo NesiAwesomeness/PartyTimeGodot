@@ -1,24 +1,19 @@
 <script>
-	import { rtdb } from '$lib/firebase';
-	import { currentChat, gameRequest } from '$lib/appData';
-	import { push, ref, update } from 'firebase/database';
+	import { app, game } from '$lib/app.svelte';
 
-	export let game = {
-		name: 'Game Title',
-		key: ''
-	};
+	let { option } = $props();
 
 	async function newGame() {
-		if ($currentChat.id === '') return;
-		gameRequest.set(game.key);
+		if (app.currentChat.id === '') return;
+		game.setRequest(game.key);
 	}
 </script>
 
 <button
 	class="flex flex-col gap-1 cursor-pointer p-2 rounded-xl border-none h-fit text-white font-semibold text-base font-['Funnel_Display',sans-serif] bg-[rgb(158,185,103)] shadow-[inset_0_0_8px_rgba(255,255,255,0.25)] min-w-[90px]"
-	on:click={newGame}
+	onclick={newGame}
 >
-	<span class="w-full text-left">{game.name}</span>
+	<span class="w-full text-left">{option.name}</span>
 	<span class="flex gap-1 items-center bg-[rgba(0,0,0,0.15)] py-0.5 px-2 rounded-2xl text-xs w-fit">
 		<svg
 			xmlns="http://www.w3.org/2000/svg"

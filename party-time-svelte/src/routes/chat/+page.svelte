@@ -1,6 +1,5 @@
 <script>
-	import { userStore } from '$lib/userData';
-	import { playgrounds, currentChat, requests, requestsSent, toDisplayName } from '$lib/appData';
+	import { toDisplayName } from '$lib/appData';
 
 	import { onDestroy, onMount } from 'svelte';
 	import { games } from '$lib/appData';
@@ -13,124 +12,50 @@
 	import ChatItem from '$lib/components/ChatItem.svelte';
 	import GameBubble from '$lib/components/GameBubble.svelte';
 	import GameOption from '$lib/components/GameOption.svelte';
-	import RevealButton from '$lib/components/RevealButton.svelte';
+	import RevealButton from '$lib/interfaces/RevealButton.svelte';
 	import Request from '$lib/components/Request.svelte';
+	import Modal from '$lib/interfaces/Modal.svelte';
+	import Loader from '$lib/interfaces/Loader.svelte';
 
-	import { goto } from '$app/navigation';
-	import { auth, db, rtdb } from '$lib/firebase';
-	import { get, ref, set } from 'firebase/database';
+	import { auth } from '$lib/firebase';
+	import { app } from '$lib/app.svelte';
 
-	import {
-		addDoc,
-		collection,
-		doc,
-		getDocs,
-		onSnapshot,
-		query,
-		setDoc,
-		where
-	} from 'firebase/firestore';
+	let signOutModal = $state(false);
+	let addFriendModal = $state(false);
 
-	let loading = true;
-	let username = 'Username';
-
-	let newRequest = false;
-	let requestUnsub = null;
-	let playgroundUnsub = null;
-
-	let isSearching = false;
-
-	let signOutModal = false;
-	let addFriendModal = false;
-
-	$: memberList = $currentChat?.members ? Object.values($currentChat.members) : [];
-	$: isGroup = $currentChat?.isGroup;
+	let memberList = $derived(app.currentChat?.members ? Object.values(app.currentChat.members) : []);
+	let gameOptions = $derived(memberList.length > 1 ? $games : []);
+	let isGroup = $derived(app.currentChat?.isGroup);
 
 	onMount(() => {
-		$currentChat = {
-			chatName: 'Playground Name',
-			id: ''
-		};
-
-		fetchPlaygroundData($userStore.uid);
+		app.resetCurrentChat();
 	});
 
-	onDestroy(() => {
-		stopListening();
+	let chatContainer = $state(null);
+
+	$effect(() => {
+		if (chatContainer && app.currentChat.gameArray) {
+			setTimeout(() => {
+				chatContainer.scrollTo({
+					top: chatContainer.scrollHeight,
+					behavior: 'smooth'
+				});
+			}, 50);
+		}
 	});
 
-	function stopListening() {
-		if (requestUnsub) {
-			requestUnsub();
-			requestUnsub = null;
-		}
+	let requestList = $state(false);
 
-		if (playgroundUnsub) {
-			playgroundUnsub();
-			playgroundUnsub = null;
-		}
-	}
+	let searchName = $state('');
+	let searchResults = $derived(
+		searchName === ''
+			? app.playgrounds
+			: app.playgrounds.filter(({ chatName }) =>
+					chatName.toLowerCase().includes(searchName.toLowerCase())
+				)
+	);
 
-	async function fetchPlaygroundData(uid) {
-		stopListening();
-
-		if (uid != '') {
-			const playgroundRef = collection(db, 'users', uid, 'playgrounds');
-			playgroundUnsub = onSnapshot(playgroundRef, (snapshot) => {
-				let tempItems = [];
-				snapshot.forEach((doc) => {
-					tempItems.push({ id: doc.id, ...doc.data() });
-				});
-				tempItems.sort((a, b) => b.timestamp - a.timestamp);
-				$playgrounds = tempItems;
-			});
-
-			const requestsRef = collection(db, 'users', uid, 'requests');
-
-			requestUnsub = onSnapshot(requestsRef, (snapshot) => {
-				let tempItems = [];
-				snapshot.forEach((doc) => {
-					tempItems.push({ id: doc.id, ...doc.data() });
-				});
-				tempItems.sort((a, b) => b.timestamp - a.timestamp);
-				$requests = tempItems;
-
-				console.log('New Requests', tempItems);
-
-				// const latestRequest = tempItems.reduce(
-				// 	(max, request) => (request.timestamp > max.timestamp ? game : max),
-				// 	{ timestamp: $userStore.lastCheckedRequests || 0 }
-				// );
-
-				// newRequest = latestRequest.timestamp > $userStore.lastCheckedRequests;
-				// Updates the requests received by the current user
-			});
-		}
-	}
-
-	let chatContainer = null;
-
-	$: if ($currentChat.gameArray && chatContainer) {
-		// Wait for the DOM to update with the new item
-		setTimeout(() => {
-			chatContainer.scrollTo({
-				top: chatContainer.scrollHeight,
-				behavior: 'smooth'
-			});
-		}, 50);
-	}
-
-	let gameOptions = [];
-
-	$: if ($currentChat) displayGameOptions();
-
-	function displayGameOptions() {
-		gameOptions = $games;
-	}
-
-	let requestList = false;
-	let searchName = '';
-	let friendName = '';
+	let friendName = $state('');
 
 	import { flip } from 'svelte/animate';
 	import { fly, fade } from 'svelte/transition';
@@ -141,7 +66,7 @@
 	import GodotHolder from '$lib/components/GodotHolder.svelte';
 
 	let lastClickedRect = null;
-	let isGameOpen = false;
+	let isGameOpen = $state(false);
 
 	const holderBounds = spring(
 		{ x: 0, y: 0, w: 1, h: 1, o: 0, r: 16 },
@@ -210,85 +135,25 @@
 	}
 
 	import { signOut } from 'firebase/auth';
-	import Modal from '$lib/components/Modal.svelte';
-	import Loader from '$lib/components/Loader.svelte';
 	import { toast } from 'svelte-sonner';
-
-	$: friendsResult = $playgrounds;
-
-	function handleFindFriend(e) {
-		const friend = e.currentTarget.value.toLowerCase();
-		if (friend !== '') {
-			isSearching = true;
-		} else {
-			friendsResult = $playgrounds;
-			isSearching = false;
-		}
-
-		friendsResult = $playgrounds.filter(({ chatName }) => chatName.toLowerCase().includes(friend));
-	}
-
-	let isRequesting = false;
-
-	async function handleSendRequest() {
-		if (!friendName) return;
-
-		isRequesting = true;
-
-		try {
-			// 2. Query the 'users' collection where username == friendUsername
-			const usersRef = collection(db, 'users');
-			const q = query(usersRef, where('username', '==', friendName));
-
-			const querySnapshot = await getDocs(q);
-			const searchedName = friendName;
-
-			friendName = '';
-			isRequesting = false;
-
-			if (querySnapshot.empty) {
-				// use toast here...?
-				console.log('User not found!');
-				return;
-			}
-
-			const friendDoc = querySnapshot.docs[0];
-			const friendId = friendDoc.id;
-			const requestRef = doc(db, 'users', friendId, 'requests', $userStore.uid);
-
-			await setDoc(requestRef, {
-				username: $userStore.username,
-				timestamp: Date.now()
-			});
-
-			console.log('Request sent successfully to', searchedName);
-		} catch (error) {
-			console.error('Error sending request:', error);
-			isRequesting = false;
-		}
-	}
 
 	async function handleLogOut() {
 		try {
 			await signOut(auth);
-			stopListening();
 		} catch (error) {
 			console.error('Error signing out:', error.message);
 		}
 	}
 
 	// Modal state
-	let addGroupModal = false;
+	let addGroupModal = $state(false);
 
 	// Form state
-	let groupName = '';
-	let selectedChats = [];
+	let groupName = $state('');
+	let selectedChats = $state([]);
 
-	// Derived state: Filter out existing groups to only show individual friends
-	$: eligibleChats = $playgrounds.filter((chat) => !chat.isGroup);
-
-	// Validation: Must have a name and at least 2 people selected
-	$: canCreateGroup = groupName.trim() !== '' && selectedChats.length >= 2;
+	let eligibleChats = app.playgrounds.filter((chat) => !chat.isGroup);
+	let canCreateGroup = $derived(groupName.trim() !== '' && selectedChats.length >= 2);
 
 	function toggleChatSelection(chatId) {
 		if (selectedChats.includes(chatId)) {
@@ -297,69 +162,6 @@
 		} else {
 			// Add if not selected
 			selectedChats = [...selectedChats, chatId];
-		}
-	}
-
-	async function handleCreateGroup() {
-		if (!canCreateGroup || !$userStore || !$userStore.uid) return;
-
-		const userID = $userStore.uid;
-		const myUsername = $userStore.username;
-		const timestamp = Date.now();
-
-		// Build group members dictionary
-		let groupMembers = { [userID]: myUsername };
-		let friendUserIds = []; // We need these for the fan-out
-
-		for (const chatId of selectedChats) {
-			const membersRef = ref(rtdb, `chats/${chatId}/members`);
-			const snapshot = await get(membersRef);
-
-			if (snapshot.exists()) {
-				const membersDict = snapshot.val();
-				const friendId = Object.keys(membersDict).find((id) => id !== userID);
-
-				if (friendId) {
-					groupMembers[friendId] = membersDict[friendId];
-					friendUserIds.push(friendId);
-				}
-			}
-		}
-
-		// Cache group name before clearing and hiding UI immediately
-		const finalGroupName = groupName;
-		closeGroupModal();
-
-		try {
-			// 1. Create document in my playgrounds (auto-generates the group ID)
-			const myPlaygroundsRef = collection(db, 'users', userID, 'playgrounds');
-			const groupData = {
-				chatName: finalGroupName,
-				creator: myUsername,
-				timestamp: timestamp,
-				isGroup: true,
-				lastOpened: 0.0
-			};
-
-			const gameDocument = await addDoc(myPlaygroundsRef, groupData);
-			const groupID = gameDocument.id;
-
-			// 2. Set up RTDB chat reference
-			const chatRef = ref(rtdb, `chats/${groupID}`);
-			await set(chatRef, {
-				games: { null: 0 }, // Equivalent to NULL_GAME
-				members: groupMembers
-			});
-
-			// 3. "Fan out" to all other members
-			for (const memberID of friendUserIds) {
-				const theirPlaygroundRef = doc(db, 'users', memberID, 'playgrounds', groupID);
-				await setDoc(theirPlaygroundRef, groupData);
-			}
-
-			console.log('Group created successfully:', groupID);
-		} catch (error) {
-			console.error('Error creating group:', error);
 		}
 	}
 
@@ -380,13 +182,12 @@
 	<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
 	<div class="flex justify-center items-center gap-[10px] mt-[30px]">
 		<button
-			on:click={() => {
+			onclick={() => {
 				signOutModal = false;
 			}}
 			class="px-[16px] py-[2px] rounded-full bg-[white] text-black">No</button
 		>
-		<button class="px-[16px] py-[2px] rounded-full bg-[#cb4444]" on:click={handleLogOut}>Yes</button
-		>
+		<button class="px-[16px] py-[2px] rounded-full bg-[#cb4444]" onclick={handleLogOut}>Yes</button>
 	</div>
 </Modal>
 
@@ -401,15 +202,15 @@
 				name="search"
 				type="text"
 				placeholder="Paste Username Here"
-				disabled={isRequesting}
+				disabled={app.isRequesting}
 			/>
 
 			<button
 				class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-				on:click={handleSendRequest}
-				disabled={isRequesting}
+				onclick={app.handleSendRequest(friendName)}
+				disabled={app.isRequesting}
 			>
-				{#if isRequesting}
+				{#if app.isRequesting}
 					<span class="text-white text-xs">...</span>
 				{:else}
 					<img src={add} class="w-4 h-4" alt="Add Friend" />
@@ -450,7 +251,7 @@
                         {selectedChats.includes(chat.id)
 							? 'bg-white/10'
 							: 'bg-transparent hover:bg-white/5'}"
-						on:click={() => toggleChatSelection(chat.id)}
+						onclick={() => toggleChatSelection(chat.id)}
 					>
 						<span class="text-white text-sm font-medium">{chat.chatName}</span>
 
@@ -485,7 +286,10 @@
 
 		<button
 			class="mt-1 w-full bg-gray-200 text-[#161616] font-bold text-sm h-11 rounded-xl flex items-center justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-			on:click={handleCreateGroup}
+			onclick={() => {
+				app.handleCreateGroup(groupName, selectedChats);
+				closeGroupModal();
+			}}
 			disabled={!canCreateGroup}
 		>
 			Create Group
@@ -498,13 +302,13 @@
 	<div
 		class="grid box-border gap-2 [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-flow-col [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-cols-[auto_1fr] [@media(max-width:649px),(max-aspect-ratio:4/5)]:grid-cols-1 w-full h-full p-2"
 	>
-		{#if $userStore.uid === ''}
+		{#if app.uid === ''}
 			<div class="flex justify-center items-center w-screen h-screen"><Loader size={64} /></div>
 		{:else}
 			<!-- Chat View -->
 			<div
-				class="grid grid-rows-[auto_1fr_48px] gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:max-w-[300px] h-full min-h-0 {$currentChat.id !=
-				''
+				class="grid grid-rows-[auto_1fr_48px] gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:max-w-[300px] h-full min-h-0 {app
+					.currentChat.id != ''
 					? '[@media(max-width:649px),(max-aspect-ratio:4/5)]:hidden'
 					: ''}"
 			>
@@ -517,7 +321,6 @@
 							name="search"
 							type="text"
 							placeholder="Search"
-							on:input={handleFindFriend}
 						/>
 
 						{#if requestList}
@@ -536,7 +339,7 @@
 								label="Friends"
 								on:click={() => {
 									requestList = true;
-									$userStore.lastCheckedRequests = Date.now();
+									app.lastCheckedRequests = Date.now();
 								}}
 							/>
 						{/if}
@@ -548,7 +351,7 @@
 						>
 							<button
 								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
-								on:click={() => {
+								onclick={() => {
 									requestList = false;
 									addFriendModal = true;
 								}}
@@ -557,7 +360,7 @@
 							</button>
 							<button
 								class="font-[inherit] p-3 border-none font-semibold text-base text-white/80 bg-[#4e88aa] cursor-pointer rounded-2xl overflow-hidden"
-								on:click={() => {
+								onclick={() => {
 									addGroupModal = true;
 									requestList = false;
 								}}
@@ -566,7 +369,7 @@
 							</button>
 							<span class="text-white/40"> Requests </span>
 							<div class="grid gap-2">
-								{#each $requests as item (item.id)}
+								{#each app.requests as item (item.id)}
 									<Request request={item} />
 								{:else}
 									<span class="text-white/20 p-4">No Requests</span>
@@ -583,7 +386,7 @@
 						<div
 							class="p-0 m-0 grid gap-0.5 rounded-2xl bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
 						>
-							{#each friendsResult as item, i (item.id)}
+							{#each searchResults as item, i (item.id)}
 								<div
 									animate:flip={{ duration: 400 }}
 									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
@@ -600,10 +403,10 @@
 					class="grid grid-cols-[auto_1fr_90px] gap-1 items-center px-1 text-white bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)] rounded-2xl overflow-hidden"
 				>
 					<div class="w-6 h-6 bg-white/75 rounded-full m-2 shrink-0"></div>
-					<p class="text-xl font-semibold w-full m-0 truncate">{$userStore.username}</p>
+					<p class="text-xl font-semibold w-full m-0 truncate">{app.username}</p>
 					<button
 						class="appearance-none grid justify-center bg-[#cb4444] text-xs font-medium rounded-full m-2 p-1 cursor-pointer"
-						on:click={() => {
+						onclick={() => {
 							signOutModal = true;
 						}}>Sign out</button
 					>
@@ -612,12 +415,12 @@
 
 			<!-- Playground View -->
 			<div
-				class="grid gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:min-w-[360px] min-h-0 {$currentChat.id ==
-				''
+				class="grid gap-2 w-full [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:min-w-[360px] min-h-0 {app
+					.currentChat.id == ''
 					? '[@media(max-width:649px),(max-aspect-ratio:4/5)]:hidden'
 					: ''}"
 				style="
-                grid-template-rows: 48px 1fr {$currentChat.id != '' ? '120px' : ''};
+                grid-template-rows: 48px 1fr {memberList == [] ? '120px' : ''};
             "
 			>
 				<div
@@ -627,8 +430,8 @@
 					<button
 						title="back"
 						class="[@media(max-width:649px),(max-aspect-ratio:4/5)]:flex [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:hidden appearance-none bg-transparent border-none p-2 ml-1 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 transition-colors"
-						on:click={() => {
-							$currentChat = { chatName: 'Playground Name', id: '', gameArray: [] };
+						onclick={() => {
+							app.resetCurrentChat();
 						}}
 					>
 						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -647,7 +450,7 @@
 					</svg>
 
 					<p class="text-xl font-semibold w-full m-0 truncate">
-						{toDisplayName($currentChat.chatName)}
+						{toDisplayName(app.currentChat.chatName)}
 					</p>
 
 					{#if isGroup}
@@ -662,33 +465,37 @@
 						</div>
 					{/if}
 				</div>
-				<div
-					class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
-				>
+				{#if memberList !== []}
 					<div
-						class="flex flex-col-reverse p-2 gap-2 h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-						bind:this={chatContainer}
+						class="rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_4px_rgba(255,255,255,0.02)]"
 					>
-						{#if $currentChat.members !== []}
-							{#each $currentChat.gameArray as item, i (item.id)}
-								<div
-									animate:flip={{ duration: 400 }}
-									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
-								>
-									<GameBubble gameData={item} id={item.id} on:click={openGame} />
-								</div>
+						<div
+							class="flex flex-col-reverse p-2 gap-2 h-full box-border overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+							bind:this={chatContainer}
+						>
+							{#if memberList !== []}
+								{#each app.currentChat.gameArray as item, i (item.id)}
+									<div
+										animate:flip={{ duration: 400 }}
+										in:fly={{ y: 20, duration: 300, delay: i * 50 }}
+									>
+										<GameBubble gameData={item} id={item.id} on:click={openGame} />
+									</div>
+								{/each}
+							{/if}
+						</div>
+					</div>
+					{#if app.currentChat.id != ''}
+						<div
+							class="w-full h-full flex flex-row gap-2 p-2 box-border rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.02),inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_32px_#212121,inset_0_0_32px_#212121,inset_0_0_64px_#212121,inset_0_0_128px_#212121] bg-[radial-gradient(circle,rgba(255,255,255,0.04)_0.5px,transparent_1.5px)] bg-[size:12px_12px] bg-[position:2px_0]"
+						>
+							{#each gameOptions as option (option.key)}
+								<GameOption {option} />
 							{/each}
-						{/if}
-					</div>
-				</div>
-				{#if $currentChat.id != ''}
-					<div
-						class="w-full h-full flex flex-row gap-2 p-2 box-border rounded-2xl overflow-hidden bg-[#212121] shadow-[inset_0_0_4px_rgba(255,255,255,0.02),inset_0_0_4px_rgba(255,255,255,0.025),inset_0_0_32px_#212121,inset_0_0_32px_#212121,inset_0_0_64px_#212121,inset_0_0_128px_#212121] bg-[radial-gradient(circle,rgba(255,255,255,0.04)_0.5px,transparent_1.5px)] bg-[size:12px_12px] bg-[position:2px_0]"
-					>
-						{#each gameOptions as game (game.key)}
-							<GameOption {game} />
-						{/each}
-					</div>
+						</div>
+					{/if}
+				{:else}
+					<Loader />
 				{/if}
 			</div>
 		{/if}
