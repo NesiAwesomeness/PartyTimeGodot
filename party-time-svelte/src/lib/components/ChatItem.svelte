@@ -61,7 +61,9 @@
 						Object.keys(latestGame).includes('gameState') &&
 						Object.keys(latestGame.gameState).includes('playerTurn');
 
-					forYou = latestGame.gameState.playerTurn == app.currentChat.playerIndex;
+					if (lastGameisTurnBased) {
+						forYou = latestGame.gameState.playerTurn === playerIndex;
+					}
 
 					if (newTimestamp > (chatItem.timestamp || 0)) {
 						updateTimestamp(newTimestamp);
