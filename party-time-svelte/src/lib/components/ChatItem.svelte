@@ -31,6 +31,7 @@
 		}
 
 		const chatRef = ref(rtdb, `chats/${chatItem.id}`);
+
 		currentUnsubscribe = onValue(chatRef, (snapshot) => {
 			let newTimestamp = chatItem.timestamp;
 
@@ -60,12 +61,16 @@
 						Object.keys(latestGame).includes('gameState') &&
 						Object.keys(latestGame.gameState).includes('playerTurn');
 
-					if (lastGameisTurnBased)
+					if (lastGameisTurnBased) {
 						forYou = latestGame.gameState.playerTurn == app.currentChat.playerIndex;
+					}
 
 					if (newTimestamp > (chatItem.timestamp || 0)) {
 						updateTimestamp(newTimestamp);
 					}
+				} else {
+					lastGameTitle = '';
+					lastGameisTurnBased = false;
 				}
 			}
 
