@@ -16,7 +16,11 @@
 	let gameArray = [];
 	let members = {};
 	let playerIndex = -1;
+
 	let lastGameTitle = $state('');
+
+	let lastGameisTurnBased = $state(false);
+	let forYou = $state(false);
 
 	let currentUnsubscribe = null;
 
@@ -44,19 +48,22 @@
 
 				gameArray.sort((a, b) => b.timestamp - a.timestamp);
 
-				const latestGame = gameArray.reduce(
-					(max, game) => (game.timestamp > max.timestamp ? game : max),
-					{ timestamp: chatItem.timestamp || 0 }
-				);
+				if (gameArray.length > 0) {
+					const latestGame = gameArray[0];
 
-				// console.log(chatItem.chatName, latestGame);
+					lastGameTitle = latestGame.name;
+					newTimestamp = latestGame.timestamp;
 
-				lastGameTitle = latestGame.name;
-				newTimestamp = latestGame.timestamp;
+					lastGameisTurnBased =
+						Object.keys(latestGame).includes('gameState') &&
+						Object.keys(latestGame.gameState).includes('playerTurn');
 
-				if (newTimestamp > chatItem.timestamp) {
-					chatItem.timestamp = newTimestamp;
-					updateTimestamp(newTimestamp);
+					if (lastGameisTurnBased)
+						forYou = latestGame.gameState.playerTurn == app.currentChat.playerIndex;
+
+					if (newTimestamp > (chatItem.timestamp || 0)) {
+						updateTimestamp(newTimestamp);
+					}
 				}
 			}
 
@@ -115,17 +122,19 @@
 				: 'text-white/[0.32]'}"
 		>
 			{#if lastGameTitle}
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 12 12"
-					width="12"
-					height="12"
-					fill="rgb(203, 68, 68)"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<circle cx="6" cy="6" r="5"></circle>
-				</svg>
+				{#if lastGameisTurnBased}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 12 12"
+						width="12"
+						height="12"
+						fill={forYou ? 'rgb(203,68,68)' : 'rgb(128,128,128)'}
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="6" cy="6" r="5"></circle>
+					</svg>
+				{/if}
 				{lastGameTitle}
 			{:else}
 				No Games

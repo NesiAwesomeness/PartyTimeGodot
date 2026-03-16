@@ -14,11 +14,10 @@
 	let open = false;
 
 	onMount(() => {
-		window.removeEventListener('beforeunload', handleEmergencyCleanup);
+		window.removeEventListener('beforeunload', leaveSession);
 	});
 
 	function handleEmergencyCleanup(event) {
-		// This guarantees WebRTC ports are flushed before the browser kills the page
 		leaveSession();
 	}
 
@@ -46,18 +45,14 @@
 
 			for (const peerId in meshState.dataChannels) {
 				const channel = meshState.dataChannels[peerId];
-				if (channel && channel.readyState === 'open') {
-					channel.send(data);
-				}
+				if (channel && channel.readyState === 'open') channel.send(data);
 			}
 		};
 
 		// 2. Direct Message: Godot calls this to send data to ONE specific player
 		cw.GodotSendToPlayer = (targetPeerId, data) => {
 			const channel = meshState.dataChannels[targetPeerId];
-			if (channel && channel.readyState === 'open') {
-				channel.send(data);
-			}
+			if (channel && channel.readyState === 'open') channel.send(data);
 		};
 
 		// 3. Get ID: Godot calls this on startup to know what Player Number it is
@@ -108,9 +103,8 @@
 	// SVELTE TO GODOT
 	function pushGodot(functionName, data) {
 		const jsonString = JSON.stringify(data);
-		if (iframeRef && iframeRef.contentWindow && iframeRef.contentWindow.sendToGodot) {
+		if (iframeRef && iframeRef.contentWindow && iframeRef.contentWindow.sendToGodot)
 			iframeRef.contentWindow.sendToGodot(functionName, jsonString);
-		}
 	}
 
 	// GODOT TO SVELTE
@@ -220,7 +214,8 @@
 <svelte:window on:message={pullGodot} />
 
 <div
-	class="absolute grid grid-cols-1 items-center border-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden box-border {isGameOpen
+	class="absolute grid grid-cols-1 items-center border-none overflow-hidden
+	[scrollbar-width:none] [&::-webkit-scrollbar]:hidden box-border {isGameOpen
 		? 'z-[2] pointer-events-auto'
 		: 'z-0 pointer-events-none'}"
 	style="
@@ -246,7 +241,8 @@
 	>
 		<button
 			title="Close Game"
-			class="[z-index:inherit] box-border rounded-full p-0 w-[36px] min-h-[42px] h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
+			class="[z-index:inherit] box-border rounded-full p-0 w-[36px] min-h-[42px]
+			h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
 			onclick={() => {
 				closeGame();
 				dispatch('click');

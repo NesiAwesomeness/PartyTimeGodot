@@ -150,7 +150,7 @@
 	let groupName = $state('');
 	let selectedChats = $state([]);
 
-	let eligibleChats = app.playgrounds.filter((chat) => !chat.isGroup);
+	let eligibleChats = $derived(app.playgrounds.filter((chat) => !chat.isGroup));
 	let canCreateGroup = $derived(groupName.trim() !== '' && selectedChats.length >= 2);
 
 	function toggleChatSelection(chatId) {

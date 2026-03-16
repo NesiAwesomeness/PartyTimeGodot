@@ -8,7 +8,7 @@ import {
 
 import { goto } from "$app/navigation";
 import { toDisplayName } from "./appData";
-import { ref, set } from "firebase/database";
+import { get, ref, set } from "firebase/database";
 
 class appState {
 	loading = $state(true)
