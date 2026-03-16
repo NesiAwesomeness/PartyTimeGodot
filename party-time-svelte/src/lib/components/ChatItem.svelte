@@ -61,7 +61,6 @@
 
 					if (lastGameisTurnBased) {
 						forYou = latestGame.gameState.playerTurn === playerIndex;
-						console.log(gameArray, latestGame, playerIndex, latestGame.gameState.playerTurn);
 					}
 
 					if (newTimestamp > (chatItem.timestamp || 0)) {
