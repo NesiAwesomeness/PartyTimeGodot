@@ -1,5 +1,4 @@
-// this is gameData
-
+// this is games
 export const games = [
 	{
 		name: "Go Fish",

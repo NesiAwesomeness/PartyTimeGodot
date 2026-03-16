@@ -13,9 +13,6 @@ func _ready():
 	web_callback_ref = JavaScriptBridge.create_callback(godot_callback)
 	var window = JavaScriptBridge.get_interface("window")
 	window.sendToGodot = web_callback_ref
-	
-	NetworkManager.mesh_entered.connect(on_mesh_entered)
-	NetworkManager.mesh_exited.connect(on_mesh_exited)
 
 func on_mesh_entered():
 	#modal.hide()
@@ -29,6 +26,9 @@ func on_mesh_exited():
 func godot_callback(args):
 	var function_name = args[0]
 	var data = args[1]
+	
+	print(function_name)
+	return
 	
 	var parsed_data
 	

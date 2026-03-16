@@ -1,6 +1,5 @@
 <script>
 	import { toDisplayName } from '$lib/appData';
-
 	import { onDestroy, onMount } from 'svelte';
 	import { games } from '$lib/appData';
 
@@ -135,7 +134,6 @@
 	}
 
 	import { signOut } from 'firebase/auth';
-	import { toast } from 'svelte-sonner';
 
 	async function handleLogOut() {
 		try {
@@ -176,7 +174,7 @@
 
 <svelte:window on:resize={handleResize} />
 
-<GodotHolder rect={$holderBounds} {isGameOpen} on:click={closeGame} />
+<GodotHolder rect={$holderBounds} on:click={closeGame} />
 
 <Modal bind:isOpen={signOutModal} class="flex justify-center items-center">
 	<h3 class="text-xl text-center max-w-[250px]">Are you sure you want to Sign out?</h3>
@@ -206,8 +204,12 @@
 			/>
 
 			<button
-				class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-				onclick={app.handleSendRequest(friendName)}
+				class="bg-white/10 flex-shrink-0 w-8 h-8 rounded-full flex
+				items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+				onclick={() => {
+					app.handleSendRequest(friendName);
+					friendName = '';
+				}}
 				disabled={app.isRequesting}
 			>
 				{#if app.isRequesting}
@@ -243,7 +245,8 @@
 			>
 
 			<div
-				class="flex flex-col bg-[#161616] rounded-xl border border-white/10 max-h-[40vh] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full"
+				class="flex flex-col bg-[#161616] rounded-xl border border-white/10 max-h-[40vh] overflow-y-auto overflow-x-hidden
+				[scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full"
 			>
 				{#each eligibleChats as chat (chat.id)}
 					<button
@@ -285,12 +288,13 @@
 		</div>
 
 		<button
-			class="mt-1 w-full bg-gray-200 text-[#161616] font-bold text-sm h-11 rounded-xl flex items-center justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+			class="mt-1 w-full bg-gray-200 text-[#161616] font-bold text-sm h-11 rounded-xl flex items-center
+			justify-center disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+			disabled={!canCreateGroup}
 			onclick={() => {
 				app.handleCreateGroup(groupName, selectedChats);
 				closeGroupModal();
 			}}
-			disabled={!canCreateGroup}
 		>
 			Create Group
 		</button>
@@ -300,7 +304,8 @@
 <div class="absolute w-screen h-screen bg-[#1c1c1c]">
 	<!-- Custom aspect ratio AND max-width modifiers replacing portrait/landscape -->
 	<div
-		class="grid box-border gap-2 [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-flow-col [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-cols-[auto_1fr] [@media(max-width:649px),(max-aspect-ratio:4/5)]:grid-cols-1 w-full h-full p-2"
+		class="grid box-border gap-2 [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-flow-col
+		[@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-cols-[auto_1fr] [@media(max-width:649px),(max-aspect-ratio:4/5)]:grid-cols-1 w-full h-full p-2"
 	>
 		{#if app.uid === ''}
 			<div class="flex justify-center items-center w-screen h-screen"><Loader size={64} /></div>
@@ -429,7 +434,8 @@
 					<!-- Back Button -->
 					<button
 						title="back"
-						class="[@media(max-width:649px),(max-aspect-ratio:4/5)]:flex [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:hidden appearance-none bg-transparent border-none p-2 ml-1 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+						class="[@media(max-width:649px),(max-aspect-ratio:4/5)]:flex [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:hidden
+						appearance-none bg-transparent border-none p-2 ml-1 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 transition-colors"
 						onclick={() => {
 							app.resetCurrentChat();
 						}}

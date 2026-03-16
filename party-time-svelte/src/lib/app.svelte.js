@@ -1,6 +1,11 @@
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db, rtdb } from "./firebase";
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
+
+import {
+	addDoc, collection, deleteDoc, doc, getDoc,
+	getDocs, onSnapshot, query, setDoc, where
+} from "firebase/firestore";
+
 import { goto } from "$app/navigation";
 import { toDisplayName } from "./appData";
 import { ref, set } from "firebase/database";
@@ -133,6 +138,8 @@ class appState {
 				return;
 			}
 
+			console.log("ummm...")
+
 			const friendDoc = querySnapshot.docs[0];
 			const friendId = friendDoc.id;
 			const requestRef = doc(db, 'users', friendId, 'requests', this.uid);
@@ -226,10 +233,6 @@ class appState {
 			});
 
 			const chatID = gameDocument.id;
-
-			const requestRef = doc(db, 'users', userID, 'requests', request.id);
-			await deleteDoc(requestRef);
-
 			const chatRef = ref(rtdb, `chats/${chatID}`);
 
 			const members = {};
@@ -250,6 +253,10 @@ class appState {
 				isGroup: false,
 				lastOpened: 0
 			});
+
+			const requestRef = doc(db, 'users', userID, 'requests', request.id);
+			await deleteDoc(requestRef);
+
 			console.log('Successfully created chat room:', chatID);
 		} catch (error) {
 			console.error('Error accepting request:', error);
@@ -307,6 +314,9 @@ class appState {
 			gameData: {},
 		}
 	}
+
+	peerConnections = $state({})
+	dataChannels = $state({})
 
 }
 

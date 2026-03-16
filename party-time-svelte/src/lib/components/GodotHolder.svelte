@@ -1,147 +1,30 @@
 <script>
 	import { app, game } from '$lib/app.svelte';
 	import { rtdb } from '$lib/firebase';
-	import {
-		get,
-		onDisconnect,
-		onValue,
-		push,
-		ref,
-		remove,
-		runTransaction,
-		update
-	} from 'firebase/database';
+	import { onDisconnect, onValue, push, ref, remove, update } from 'firebase/database';
+	import { joinSession, leaveMeshSession, meshState } from '$lib/webrtc';
 
 	let isLoaded = $state(false);
+	let iframeRef;
 
-	let iframeGodot;
-
-	let { isGameOpen, rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
-
-	let lastUpdated = 0.0;
-	let myGodotId = 0;
-
-	let sessionRef;
-
-	let playersUnsub;
-	let signalingUnsub;
+	let { rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
 	let gameStateUnsub;
 
+	let isGameOpen = $derived(app.currentGame.id !== '');
+	let open = false;
+
 	$effect(() => {
-		if (isGameOpen) {
-			joinSession();
-			gameStart();
+		if (open != isGameOpen) {
+			open = isGameOpen;
+			if (isGameOpen) {
+				console.log(app.currentGame.id);
+
+				joinSession();
+				gameStart();
+			}
 		}
 	});
 
-	async function joinSession() {
-		console.log('Joining Session');
-		if (!app.uid) return;
-
-		const playersRef = ref(
-			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players`
-		);
-
-		// --- THE TRANSACTION (The "Ticket Booth") ---
-		// This prevents two people from grabbing "Player 1" simultaneously
-		const result = await runTransaction(playersRef, (currentData) => {
-			if (currentData === null) {
-				// Room is empty? Create it with me in slot 1
-				return { '1': app.uid };
-			}
-
-			// Room exists. Find first empty slot (1 to 32)
-			for (let i = 1; i <= 32; i++) {
-				const slotKey = i.toString();
-				if (!currentData.hasOwnProperty(slotKey)) {
-					// Found empty slot! Sit here.
-					currentData[slotKey] = app.uid;
-					return currentData;
-				}
-				// Edge case: Am I already in here? (Page reload)
-				if (currentData[slotKey] === app.uid) {
-					return undefined; // Abort transaction, I'm already in
-				}
-			}
-
-			// Room is full (optional handling)
-			return currentData;
-		});
-
-		if (result.committed) {
-			const data = result.snapshot.val();
-			const mySlot = Object.keys(data).find((key) => data[key] === app.uid);
-
-			if (mySlot) {
-				myGodotId = parseInt(mySlot);
-				console.log(`I have acquired Player ID: ${myGodotId}`);
-
-				// 1. Set up Disconnect (If I close tab, free up my chair)
-				sessionRef = ref(
-					rtdb,
-					`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${myGodotId}`
-				);
-				onDisconnect(sessionRef).remove();
-				setupGodotAndListeners();
-			}
-		} else {
-			const snapshot = await get(playersRef);
-			const data = snapshot.val();
-			if (data) {
-				const mySlot = Object.keys(data).find((key) => data[key] === app.uid);
-				if (mySlot) {
-					myGodotId = parseInt(mySlot);
-					setupGodotAndListeners();
-				}
-			}
-		}
-	}
-
-	function setupGodotAndListeners() {
-		// Tell Godot: "I am Player [myGodotId]"
-		pushGodot('setup_network', { id: myGodotId });
-
-		// Listen for other players
-		const allPlayersRef = ref(
-			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players`
-		);
-
-		playersUnsub = onValue(allPlayersRef, (snapshot) => {
-			const players = snapshot.val();
-			if (players) {
-				const playerIds = Object.keys(players).map(Number);
-				pushGodot('update_active_players', playerIds);
-			} else {
-				pushGodot('update_active_players', []);
-			}
-		});
-
-		listenToSignaling();
-	}
-
-	function listenToSignaling() {
-		const signalRef = ref(
-			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${myGodotId}`
-		);
-
-		signalingUnsub = onValue(signalRef, (snapshot) => {
-			const data = snapshot.val();
-			if (data) {
-				Object.entries(data).forEach(([key, msg]) => {
-					pushGodot('handle_webrtc_signal', msg);
-					remove(
-						ref(
-							rtdb,
-							`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${myGodotId}/${key}`
-						)
-					);
-				});
-			}
-		});
-	}
 	// FIREBASE TO GODOT
 	function gameStart() {
 		pushGodot('start_game', app.currentGame.gameData);
@@ -161,7 +44,7 @@
 	$effect(() => {
 		let members = {};
 
-		if (app.currentChat?.members && isLoaded) {
+		if (app.currentChat?.members && isLoaded && !open) {
 			members = app.currentChat.members;
 			const memberIds = Object.keys(members);
 
@@ -182,8 +65,8 @@
 	// SVELTE TO GODOT
 	function pushGodot(functionName, data) {
 		const jsonString = JSON.stringify(data);
-		if (iframeGodot && iframeGodot.contentWindow && iframeGodot.contentWindow.sendToGodot) {
-			iframeGodot.contentWindow.sendToGodot(functionName, jsonString);
+		if (iframeRef && iframeRef.contentWindow && iframeRef.contentWindow.sendToGodot) {
+			iframeRef.contentWindow.sendToGodot(functionName, jsonString);
 		}
 	}
 
@@ -192,22 +75,7 @@
 		const message = event.data.message;
 		const payload = event.data.data;
 
-		if (!event.data) return;
-
-		if (event.data && event.data.type === 'GODOT_SIGNAL') {
-			const { target, payload } = event.data.data;
-			const targetRef = ref(
-				rtdb,
-				`chats/${app.currentChat.id}/games/${app.currentGame.id}/signaling/${target}`
-			);
-			push(targetRef, {
-				source_id: myGodotId,
-				payload: payload
-			});
-			return;
-		}
-
-		if (!event.data.message) return;
+		if (!message || !payload) return;
 
 		// FIX this ngl.
 		switch (message) {
@@ -228,19 +96,20 @@
 	}
 
 	function leaveSession() {
-		if (myGodotId === 0) return;
+		if (meshState.myGodotId === 0) return;
 
-		// Remove myself from the chair
-		if (sessionRef) {
-			remove(sessionRef);
-			onDisconnect(sessionRef).cancel();
-		}
+		const sessionRef = ref(
+			rtdb,
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${meshState.myGodotId}`
+		);
+		remove(sessionRef);
+		onDisconnect(sessionRef).cancel();
 
-		if (playersUnsub) playersUnsub();
-		if (signalingUnsub) signalingUnsub();
 		if (gameStateUnsub) gameStateUnsub();
+		leaveMeshSession();
 
-		myGodotId = 0;
+		// 4. Finally, clear my ID
+		meshState.myGodotId = null;
 	}
 
 	async function sendGame(gameData) {
@@ -290,7 +159,10 @@
 	}
 
 	function closeGame() {
+		// this is temp...
+		leaveSession();
 		pushGodot('on_game_close', {});
+		app.resetGame();
 	}
 
 	onDestroy(() => {
@@ -318,7 +190,8 @@
 "
 >
 	<iframe
-		bind:this={iframeGodot}
+		bind:this={iframeRef}
+		id="godot-iframe"
 		class="col-start-1 row-start-1 border-none w-full h-full"
 		src="/godot-build/index.html"
 		title="Godot Game"
@@ -330,7 +203,7 @@
 	>
 		<button
 			title="Close Game"
-			class="[z-index:inherit] box-border rounded-full p-0 w-[42px] min-h-[42px] h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
+			class="[z-index:inherit] box-border rounded-full p-0 w-[36px] min-h-[42px] h-[42px] border-none cursor-pointer bg-transparent grid place-items-center"
 			onclick={() => {
 				closeGame();
 				dispatch('click');

@@ -16,6 +16,7 @@
 	let gameArray = [];
 	let members = {};
 	let playerIndex = -1;
+	let lastGameTitle = $state('');
 
 	let currentUnsubscribe = null;
 
@@ -45,9 +46,12 @@
 
 				const latestGame = Object.entries(chatData.games).reduce(
 					(max, game) => (game.timestamp > max.timestamp ? game : max),
-					{ timestamp: chatItem.timestamp || 0 }
+					{ timestamp: chatItem.timestamp || 0, name: '' }
 				);
 
+				// console.log(chatItem.chatName, latestGame);
+
+				lastGameTitle = latestGame.name;
 				newTimestamp = latestGame.timestamp;
 
 				if (newTimestamp > chatItem.timestamp) {
@@ -110,19 +114,22 @@
 				? 'text-white'
 				: 'text-white/[0.32]'}"
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 12 12"
-				width="12"
-				height="12"
-				fill="rgb(203, 68, 68)"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<circle cx="6" cy="6" r="5"></circle>
-			</svg>
-
-			Color Game
+			{#if lastGameTitle}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 12 12"
+					width="12"
+					height="12"
+					fill="rgb(203, 68, 68)"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<circle cx="6" cy="6" r="5"></circle>
+				</svg>
+				{lastGameTitle}
+			{:else}
+				No Games
+			{/if}
 		</span>
 	</div>
 </button>

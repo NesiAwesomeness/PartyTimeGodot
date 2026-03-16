@@ -7,7 +7,9 @@
 	<span class="text-white text-xl px-2 self-center">{request.username}</span>
 	<button
 		title="Accept"
-		onclick={app.handleAcceptRequest(request)}
+		onclick={() => {
+			app.handleAcceptRequest(request);
+		}}
 		class="h-full p-0 bg-transparent border-none grid place-items-center gap-[2px] cursor-pointer after:content-[''] after:col-start-1 after:row-start-1 after:relative after:w-3 after:h-3 after:bg-white after:rounded-full after:z-0"
 	>
 		<svg
@@ -22,7 +24,9 @@
 	</button>
 	<button
 		title="Reject"
-		onclick={app.handleDeclineRequest(request)}
+		onclick={() => {
+			app.handleDeclineRequest(request);
+		}}
 		class="h-full p-0 bg-transparent border-none grid place-items-center gap-[2px] cursor-pointer after:content-[''] after:col-start-1 after:row-start-1 after:relative after:w-3 after:h-3 after:bg-white after:rounded-full after:z-0"
 	>
 		<svg

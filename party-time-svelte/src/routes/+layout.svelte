@@ -2,12 +2,12 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
-	import { auth, db, rtdb } from '$lib/firebase';
-	import { addDoc, collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 	import { goto } from '$app/navigation';
 	import '../app.css';
+
 	import { app } from '$lib/app.svelte';
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
 
 	onMount(() => {
 		app.init();

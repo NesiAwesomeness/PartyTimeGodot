@@ -61,6 +61,7 @@ const PASSIVES = {
 
 func initialize_game() -> Dictionary:
 	var deck : Array = []
+	
 	for card_id in CARDS.keys():
 		var card_data = CARDS[card_id]
 		var copies_to_add = card_data["tier"]
@@ -72,40 +73,31 @@ func initialize_game() -> Dictionary:
 		deck.shuffle()
 	
 	var hand_size = 5
-	var hands = {}
-	var scores = {}
-	#this is a list of power_ups a user is actively using.
-	var passives = {}
+	var players = {}
 	
 	for member in GameManager.chat_data.members:
 		var hand = []
 		for card in hand_size:
 			hand.append( deck.pop_back() )
 		
-		hands[member] = hand
-		scores[member] = 0
-		passives[member] = ""
-	 
+		players[member]["hand"] = hand
+		players[member]["score"] = 0
+		players[member]["passives"] = ""
+	
 	print("Deck generated with %d cards." % deck.size())
 	
 	return {
 		'name' : "Go Fish",
 		'key' : 'GoFish',
+		'playerStates' : players,
 		'gameState' : {
 			'playerTurn' : 1,
 			'deck' : deck,
-			'hands' : hands,
-			'scores' : scores,
-			'passives' : passives,
-			
 			"action" : "cards dealt",
 			
-			#this means no one can do anything for 
-			#3 seconds after this timestamp...
 			'lastRequest': 0.0,
-			#the player that can play...
 			'lastRequestedPlayer': "",
-			'requestedCard' : "balls"
+			'requestedCard' : ""
 		}
 	}
 
