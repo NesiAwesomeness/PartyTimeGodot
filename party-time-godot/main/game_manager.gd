@@ -8,49 +8,71 @@ static var my_uid = ''
 static var chat_data = {}
 
 #this only works in Web Builds
-var web_callback_ref
+var svelte_bridge
+var webrtc_bridge
+var mesh_bridge
+
 func _ready():
-	web_callback_ref = JavaScriptBridge.create_callback(godot_callback)
+	svelte_bridge = JavaScriptBridge.create_callback(godot_callback)
+	webrtc_bridge = JavaScriptBridge.create_callback(on_webrtc_message)
+	mesh_bridge = JavaScriptBridge.create_callback(network_update)
+	
 	var window = JavaScriptBridge.get_interface("window")
-	window.sendToGodot = web_callback_ref
+	
+	window.sendToGodot = svelte_bridge
+	window.GodotReceiveData = webrtc_bridge
+	window.networkUpdate = mesh_bridge
 
-func on_mesh_entered():
+func network_update( args ):
+	var message = args[0]
+	var data = args[1]
+	
+	call(message, data)
+
+func peer_connected(id):
 	#modal.hide()
-	print("In Mesh")
+	print("someone joined ", id)
 
-func on_mesh_exited():
+func peer_disconnected(id):
 	#modal.show()
 	#modal.move_to_front()
-	print("Not in Mesh")
+	print("someone left ", id)
+
+func on_webrtc_message( args ):
+	var sender_peer_id = args[0]
+	var raw_data = args[1]
+	
+	if typeof(raw_data) == TYPE_STRING:
+		var parsed_data = JSON.parse_string(raw_data)
+		
+		if typeof(parsed_data) == TYPE_DICTIONARY:
+			var data = parsed_data.get("data")
+			print("I got this ", data, " from ", sender_peer_id)
+			return
+		return
+	
+	broadcast_webrtc({"Ha" : "Ha"})
+
+static func broadcast_webrtc(payload):
+	print("trying to send rtc")
+	
+	var data = payload
+	if payload is Dictionary or payload is String:
+		data = JSON.stringify({ "data": payload })
+	
+	var window = JavaScriptBridge.get_interface("window")
+	window.GodotBroadcastData(data)
 
 func godot_callback(args):
 	var function_name = args[0]
 	var data = args[1]
 	
-	print(function_name)
-	return
+	var parsed_data = data
+	if data is String: parsed_data = JSON.parse_string(data)
 	
-	var parsed_data
-	
-	if data is String:
-		parsed_data = JSON.parse_string(data)
-	else:
-		parsed_data = data
-	
-	match function_name:
-		"setup_network":
-			NetworkManager.setup_network(parsed_data.id)
-			return
-		"handle_webrtc_signal":
-			NetworkManager.handle_webrtc_signal(parsed_data)
-			return
-		"update_active_players":
-			NetworkManager.update_active_players(parsed_data)
-			return
-	
-	call( function_name, parsed_data )
-	if parsed_data is Dictionary:
-		send_data( function_name, parsed_data )
+	call( function_name , parsed_data )
+	#send read back.
+	if parsed_data is Dictionary: send_data( function_name + " from Godot", parsed_data )
 
 func update_chat(new_chat_data : Dictionary):
 	chat_data = new_chat_data
@@ -99,7 +121,3 @@ static func send_data(message_name: String, payload : Dictionary):
 	var json_string = JSON.stringify(message_data)
 	var js_code = "window.parent.postMessage(%s, '*');" % json_string
 	JavaScriptBridge.eval(js_code)
-
-static func send_webrtc_signal(payload: Dictionary):
-	var json_string = JSON.stringify(payload)
-	JavaScriptBridge.eval("window.parent.postMessage({type: 'GODOT_SIGNAL', data: %s}, '*');" % json_string)

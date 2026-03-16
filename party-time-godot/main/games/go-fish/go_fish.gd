@@ -76,6 +76,8 @@ func initialize_game() -> Dictionary:
 	var players = {}
 	
 	for member in GameManager.chat_data.members:
+		players[member] = {}
+		
 		var hand = []
 		for card in hand_size:
 			hand.append( deck.pop_back() )
@@ -105,6 +107,8 @@ var is_my_turn : bool = false
 var is_set_up : bool = false
 
 func on_set_up():
+	return
+	
 	is_set_up = true
 	
 	add_to_group("HandListener")
@@ -133,6 +137,8 @@ func on_set_up():
 	on_game_state_update( game_state )
 
 func on_game_state_update( new_game_state ):
+	return
+	
 	if not is_set_up: return
 	
 	get_tree().call_group("PassiveCard", "on_passive_update", new_game_state.passives[GameManager.my_uid])
@@ -200,6 +206,8 @@ var elapsed_time := 0.0
 var quick_time_on_going : bool
 
 func _process(_delta):
+	return
+	
 	elapsed_time = abs(game_state.lastRequest - Time.get_unix_time_from_system())
 	
 	if quick_time_on_going != (elapsed_time < REQUEST_TIME):

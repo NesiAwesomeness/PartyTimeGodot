@@ -5,7 +5,7 @@ extends GameScene
 
 func _ready():
 	button.pressed.connect( on_button_pressed )
-	NetworkManager.player_disconnected.connect(_on_player_exited)
+	#NetworkManager.player_disconnected.connect(_on_player_exited)
 
 func _on_player_exited(peer_id):
 	print("this player has left ", peer_id)
@@ -23,14 +23,13 @@ func initialize_game() -> Dictionary:
 
 func on_button_pressed():
 	#print("it is not your turn: ", current_player_index != player_index)
-	if NetworkManager.cloud_master_id != NetworkManager.my_peer_id : return
+	#if NetworkManager.cloud_master_id != NetworkManager.my_peer_id : return
 	color.color = Color( randf_range(0.5, 1.0), randf_range(0.5, 1.0), randf_range(0.5, 1.0) )
 	# Tell everyone connected to run the 'sync_color' function immediately!
-	rpc("sync_color", color.color.to_html(false))
+	#rpc("sync_color", color.color.to_html(false))
 	
-	print("color sent by ", NetworkManager.my_peer_id)
+	#print("color sent by ", NetworkManager.my_peer_id)
 
-@rpc("any_peer", "call_local", "reliable")
 func sync_color(hex_color: String):
 	color.color = Color(hex_color)
 	print("color received from somewhere")

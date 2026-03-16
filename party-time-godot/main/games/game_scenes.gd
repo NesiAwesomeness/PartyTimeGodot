@@ -8,10 +8,11 @@ var await_count : int = 0
 var game_closing = false
 
 func _ready():
-	NetworkManager.player_connected.connect(player_joined)
-	NetworkManager.player_disconnected.connect(player_exited)
-	
-	NetworkManager.server_setup.connect( on_server_setup )
+	pass
+	#NetworkManager.player_connected.connect(player_joined)
+	#NetworkManager.player_disconnected.connect(player_exited)
+	#
+	#NetworkManager.server_setup.connect( on_server_setup )
 
 func initialize_game() -> Dictionary:
 	print("There is not initialization for this game")
@@ -39,7 +40,8 @@ func on_chat_update():
 	pass
 
 func has_cloud_authority() -> bool:
-	return NetworkManager.cloud_master_id != NetworkManager.my_peer_id 
+	return false
+	#return NetworkManager.cloud_master_id != NetworkManager.my_peer_id 
 
 func on_set_up():
 	#print("Not been told what to do with this: ", _game_data)
@@ -60,7 +62,6 @@ func close_game():
 
 func delete_game():
 	if game_closing and is_inside_tree():
-		NetworkManager.close_game()
 		cloud_save(game_state)
 		
 		GameManager.send_data("end_game", {})

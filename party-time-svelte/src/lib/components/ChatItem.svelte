@@ -44,9 +44,9 @@
 
 				gameArray.sort((a, b) => b.timestamp - a.timestamp);
 
-				const latestGame = Object.entries(chatData.games).reduce(
+				const latestGame = gameArray.reduce(
 					(max, game) => (game.timestamp > max.timestamp ? game : max),
-					{ timestamp: chatItem.timestamp || 0, name: '' }
+					{ timestamp: chatItem.timestamp || 0 }
 				);
 
 				// console.log(chatItem.chatName, latestGame);

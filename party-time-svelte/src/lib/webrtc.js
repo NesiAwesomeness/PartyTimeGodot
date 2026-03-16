@@ -213,8 +213,11 @@ function setupDataChannelEvents(peerId, channel) {
 
 	channel.onopen = () => {
 		console.log(`✅ WebRTC Mesh Connected to Player ${peerId}!`);
-		// Tell Godot that a new player fully connected
-		// e.g., godotIframe.contentWindow.PeerConnected(peerId);
+
+		const godotIframe = document.getElementById("godot-iframe");
+		if (godotIframe && godotIframe.contentWindow.GodotReceiveData) {
+			godotIframe.contentWindow.networkUpdate("peer_connected", peerId);
+		}
 	};
 
 	channel.onmessage = (event) => {
@@ -229,6 +232,11 @@ function setupDataChannelEvents(peerId, channel) {
 		console.log(`❌ Player ${peerId} disconnected.`);
 		delete meshState.dataChannels[peerId];
 		delete meshState.peerConnections[peerId];
+
+		const godotIframe = document.getElementById("godot-iframe");
+		if (godotIframe && godotIframe.contentWindow.GodotReceiveData) {
+			godotIframe.contentWindow.networkUpdate("peer_disconnected", peerId);
+		}
 	};
 }
 

@@ -13,6 +13,15 @@
 	let isGameOpen = $derived(app.currentGame.id !== '');
 	let open = false;
 
+	onMount(() => {
+		window.removeEventListener('beforeunload', handleEmergencyCleanup);
+	});
+
+	function handleEmergencyCleanup(event) {
+		// This guarantees WebRTC ports are flushed before the browser kills the page
+		leaveSession();
+	}
+
 	$effect(() => {
 		if (open != isGameOpen) {
 			open = isGameOpen;
@@ -24,6 +33,40 @@
 			}
 		}
 	});
+
+	function handleIframeLoad() {
+		if (!iframeRef || !iframeRef.contentWindow) return;
+		isLoaded = true;
+
+		const cw = iframeRef.contentWindow;
+
+		// 1. Broadcast: Godot calls this to send a string/array to ALL connected players
+		cw.GodotBroadcastData = (data) => {
+			console.log('This is from Godot to RTC', data);
+
+			for (const peerId in meshState.dataChannels) {
+				const channel = meshState.dataChannels[peerId];
+				if (channel && channel.readyState === 'open') {
+					channel.send(data);
+				}
+			}
+		};
+
+		// 2. Direct Message: Godot calls this to send data to ONE specific player
+		cw.GodotSendToPlayer = (targetPeerId, data) => {
+			const channel = meshState.dataChannels[targetPeerId];
+			if (channel && channel.readyState === 'open') {
+				channel.send(data);
+			}
+		};
+
+		// 3. Get ID: Godot calls this on startup to know what Player Number it is
+		cw.GetMyGodotId = () => {
+			return meshState.myGodotId;
+		};
+
+		console.log('Godot JS Bridge Outbound Functions Injected!');
+	}
 
 	// FIREBASE TO GODOT
 	function gameStart() {
@@ -169,7 +212,7 @@
 		leaveSession();
 	});
 
-	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { expect } from 'vitest';
 	const dispatch = createEventDispatcher();
 </script>
@@ -195,7 +238,7 @@
 		class="col-start-1 row-start-1 border-none w-full h-full"
 		src="/godot-build/index.html"
 		title="Godot Game"
-		onload={() => (isLoaded = true)}
+		onload={handleIframeLoad}
 	>
 	</iframe>
 	<div
