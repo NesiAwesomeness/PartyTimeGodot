@@ -52,8 +52,6 @@
 				if (gameArray.length > 0) {
 					const latestGame = gameArray[0];
 
-					console.log(gameArray, latestGame);
-
 					lastGameTitle = latestGame.name;
 					newTimestamp = latestGame.timestamp;
 
@@ -63,6 +61,7 @@
 
 					if (lastGameisTurnBased) {
 						forYou = latestGame.gameState.playerTurn === playerIndex;
+						console.log(gameArray, latestGame, playerIndex, latestGame.gameState.playerTurn);
 					}
 
 					if (newTimestamp > (chatItem.timestamp || 0)) {
