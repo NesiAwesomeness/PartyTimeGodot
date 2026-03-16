@@ -51,6 +51,8 @@
 				if (gameArray.length > 0) {
 					const latestGame = gameArray[0];
 
+					console.log(gameArray, latestGame);
+
 					lastGameTitle = latestGame.name;
 					newTimestamp = latestGame.timestamp;
 
