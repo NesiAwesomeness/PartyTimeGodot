@@ -1,21 +1,29 @@
 <script>
 	import { app, game } from '$lib/app.svelte';
 	import { rtdb } from '$lib/firebase';
-	import { onDisconnect, onValue, push, ref, remove, update } from 'firebase/database';
+	import {
+		onChildAdded,
+		onDisconnect,
+		onValue,
+		push,
+		ref,
+		remove,
+		update
+	} from 'firebase/database';
 	import { broadcast, joinSession, leaveMeshSession, meshState, sendTo } from '$lib/webrtc';
 
 	let isLoaded = $state(false);
 	let iframeRef;
 
 	let { rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
-	let gameStateUnsub;
+	let gameMovesUnsub;
 	let playerStateUnsub;
 
 	let isGameOpen = $derived(app.currentGame.id !== '');
 	let open = false;
 
 	onMount(() => {
-		window.removeEventListener('beforeunload', leaveSession);
+		window.removeEventListener('beforeunload', handleEmergencyCleanup);
 	});
 
 	function handleEmergencyCleanup(event) {
@@ -41,8 +49,12 @@
 		const cw = iframeRef.contentWindow;
 
 		cw.GodotBroadcastData = (data) => {
-			console.log('broadcast', data);
 			broadcast(data);
+		};
+
+		cw.makeMove = async (move) => {
+			const gameRef = ref(rtdb, `chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`);
+			await push(gameRef, JSON.parse(move));
 		};
 
 		cw.GodotSendToPlayer = (targetPeerId, data) => {
@@ -60,15 +72,15 @@
 	function gameStart() {
 		pushGodot('start_game', app.currentGame.gameData);
 
-		const gameStateRef = ref(
+		const gameMovesRef = ref(
 			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/gameState/`
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`
 		);
 
-		gameStateUnsub = onValue(gameStateRef, (snapshot) => {
-			const gameState = snapshot.val();
-			if (gameState) {
-				pushGodot('update_game', gameState);
+		gameMovesUnsub = onChildAdded(gameMovesRef, (snapshot) => {
+			const newMove = snapshot.val();
+			if (newMove) {
+				pushGodot('new_move', newMove);
 			}
 		});
 
@@ -148,7 +160,7 @@
 		remove(sessionRef);
 		onDisconnect(sessionRef).cancel();
 
-		if (gameStateUnsub) gameStateUnsub();
+		if (gameMovesUnsub) gameMovesUnsub();
 		if (playerStateUnsub) playerStateUnsub();
 		leaveMeshSession();
 

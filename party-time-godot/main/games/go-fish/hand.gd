@@ -72,6 +72,29 @@ func update_hand(new_hand : Array, on_set_up : bool = false):
 		
 	arrange_cards()
 
+func shake_card( _rank ):
+	var card_node : Card = hand_container.get_node_or_null( _rank )
+	
+	if card_node: 
+		var jiggle_tween : Tween = card_node.card_body.create_tween().set_loops()
+		
+		var shake_dist: float = 2.0
+		var speed: float = 0.1
+		
+		jiggle_tween.tween_property(card_node.card_body, "position:x", 
+		shake_dist, speed).as_relative().set_trans(Tween.TRANS_SINE)
+		
+		jiggle_tween.tween_property(card_node.card_body, "position:x", 
+		-(shake_dist * 2.0), speed * 2.0).as_relative().set_trans(Tween.TRANS_SINE)
+		
+		jiggle_tween.tween_property(card_node.card_body, "position:x", 
+		shake_dist, speed).as_relative().set_trans(Tween.TRANS_SINE)
+		
+		var tween_kill = func(): if jiggle_tween: jiggle_tween.kill()
+		
+		get_tree().create_timer(GoFish.REQUEST_TIME).timeout.connect( tween_kill )
+		tree_exiting.connect( tween_kill )
+
 func arrange_cards():
 	for card_node : Card in hand_container.get_children():
 		card_node.hand_updated(is_me)

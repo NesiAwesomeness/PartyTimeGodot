@@ -30,7 +30,8 @@ var position_tween : Tween
 
 func update_count(_count : int):
 	if _count == 0:
-		print("removing: ", rank)
+		if GoFish.booked_cards.has(rank):
+			print("insert booked card animated exit here ", rank)
 		queue_free()
 		return
 	
@@ -47,10 +48,6 @@ func update_count(_count : int):
 			position_tween = create_tween()
 			position_tween.tween_property(card_body, "position:y", -32.0, duration * 2.0).set_delay(duration * 4.0)
 			position_tween.chain().tween_property(card_body, "position:y", 0.0, duration * 3.0)
-		
-		if GoFish.CARDS.has(rank):
-			if _count == GoFish.CARDS[rank].tier:
-				get_tree().call_group("CardListener", "on_book", rank)
 	count = _count
 
 #this can only be called by cards for "ME"

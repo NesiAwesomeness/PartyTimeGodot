@@ -6,9 +6,9 @@ import Peer from "peerjs";
 
 export const meshState = {
 	myGodotId: null,
-	peer: null, // The local PeerJS instance
+	peer: null,
 	iceServers: [],
-	connections: {}, // e.g., { 1: RTCPeerConnection, 2: RTCPeerConnection }
+	connections: {},
 };
 
 // --- 1. JOIN SESSION & GRAB TICKET ---

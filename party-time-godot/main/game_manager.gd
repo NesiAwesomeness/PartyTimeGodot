@@ -23,43 +23,6 @@ func _ready():
 	window.GodotReceiveData = webrtc_bridge
 	window.networkUpdate = mesh_bridge
 
-func network_update( args ):
-	var message = args[0]
-	var data = args[1]
-	
-	call(message, data)
-
-func peer_connected(id):
-	print("someone joined ", id)
-
-func peer_disconnected(id):
-	print("someone left ", id)
-
-func on_webrtc_message( args ):
-	var sender_peer_id = args[0]
-	var raw_data = args[1]
-	
-	if typeof(raw_data) == TYPE_STRING:
-		var parsed_data = JSON.parse_string(raw_data)
-		
-		if typeof(parsed_data) == TYPE_DICTIONARY:
-			var data = parsed_data.get("data")
-			print("I got this ", data, " from ", sender_peer_id)
-			return
-		return
-	
-	broadcast_webrtc({"Ha" : "Ha"})
-
-static func broadcast_webrtc(payload):
-	print("trying to send rtc")
-	
-	var data = payload
-	if payload is Dictionary or payload is String:
-		data = JSON.stringify({ "data": payload })
-	
-	var window = JavaScriptBridge.get_interface("window")
-	window.GodotBroadcastData(data)
-
 func godot_callback(args):
 	var function_name = args[0]
 	var data = args[1]
@@ -91,12 +54,17 @@ func start_game(game_data : Dictionary):
 	if not game_scene:
 		game_scene = game_scenes[game_data.key].instantiate()
 		add_child(game_scene)
+		
 		game_scene.name = game_data.key
 		game_scene.add_to_group("GameScene")
 		#serve game...
-		game_scene.set_up(game_data)
+		game_scene.start_game(game_data)
 	
 	game_scene.game_closing = false
+
+#new move has been done.
+func new_move(move):
+	get_tree().call_group("GameScene", "on_new_move", move)
 
 #game state.
 func update_game(data):
@@ -122,3 +90,39 @@ static func send_data(message_name: String, payload : Dictionary):
 	var json_string = JSON.stringify(message_data)
 	var js_code = "window.parent.postMessage(%s, '*');" % json_string
 	JavaScriptBridge.eval(js_code)
+
+func network_update( args ):
+	var message = args[0]
+	var data = args[1]
+	
+	call(message, data)
+
+func peer_connected(id):
+	print("someone joined ", id)
+
+func peer_disconnected(id):
+	print("someone left ", id)
+
+func on_webrtc_message( args ):
+	var sender_peer_id = args[0]
+	var raw_data = args[1]
+	
+	if typeof(raw_data) == TYPE_STRING:
+		var parsed_data = JSON.parse_string(raw_data)
+		
+		if typeof(parsed_data) == TYPE_DICTIONARY:
+			var data = parsed_data.get("data")
+			print("I got this ", data, " from ", sender_peer_id)
+			return
+		return
+
+
+static func broadcast_webrtc(payload):
+	print("trying to send rtc")
+	
+	var data = payload
+	if payload is Dictionary or payload is String:
+		data = JSON.stringify({ "data": payload })
+	
+	var window = JavaScriptBridge.get_interface("window")
+	window.GodotBroadcastData(data)

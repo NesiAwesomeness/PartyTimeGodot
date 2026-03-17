@@ -1,15 +1,11 @@
 class_name GameScene
 extends Node
 
-var game_data : Dictionary
-var player_state : Dictionary
+var players : Dictionary
 var game_state : Dictionary
 
 var await_count : int = 0
 var game_closing = false
-
-func _ready():
-	pass
 
 func initialize_game() -> Dictionary:
 	print("There is not initialization for this game")
@@ -17,11 +13,11 @@ func initialize_game() -> Dictionary:
 
 #this is called at the start.
 func set_up(_game_data : Dictionary):
-	game_data = _game_data
-	
-	game_state = _game_data.gameState if _game_data.has("gameState") else {}
-	player_state = _game_data.playerState if _game_data.has("playerState") else {}
+	#this is going to have a seed value, and a moves value
 	on_set_up()
+
+func start_game( new_game_data ):
+	print( new_game_data )
 
 func on_game_state_update(new_game_state):
 	print( new_game_state )
@@ -81,16 +77,10 @@ func _deep_merge(target : Dictionary, source : Dictionary) -> void:
 		if target.has(key) and typeof(target[key]) == TYPE_DICTIONARY and typeof(source[key]) == TYPE_DICTIONARY:
 			_deep_merge(target[key], source[key])
 		else:
-			
 			if typeof(source[key]) == TYPE_DICTIONARY or typeof(source[key]) == TYPE_ARRAY:
 				target[key] = source[key].duplicate(true)
 			else: target[key] = source[key]
 
-#this just reconstructs the game data.
-func get_data(new_game_state : Dictionary):
-	game_data["gameState"] = new_game_state
-	return game_data
-
-#this will tell the game scene to get the data ready and send it
-func on_user_send():
-	GameManager.send_data("Raw game data: ", game_data)
+static func make_move( move ):
+	var window = JavaScriptBridge.get_interface("window")
+	window.makeMove( JSON.stringify(move) )

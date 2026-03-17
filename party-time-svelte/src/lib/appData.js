@@ -3,6 +3,7 @@ export const games = [
 	{
 		name: "Go Fish",
 		key: "GoFish",
+		isTurnBased: true,
 	}
 ]
 

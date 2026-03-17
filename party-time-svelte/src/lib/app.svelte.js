@@ -299,7 +299,6 @@ class appState {
 
 	currentGame = $state({
 		id: "",
-		isTurnBased: false,
 		gameData: {},
 	})
 
@@ -310,7 +309,6 @@ class appState {
 	resetGame() {
 		this.currentGame = {
 			id: "",
-			isTurnBased: false,
 			gameData: {},
 		}
 	}
