@@ -84,19 +84,18 @@ func initialize_game() -> Dictionary:
 		
 		players[member]["hand"] = hand
 		players[member]["score"] = 0
-		players[member]["passives"] = ""
+		players[member]["passive"] = ""
 	
 	print("Deck generated with %d cards." % deck.size())
 	
 	return {
 		'name' : "Go Fish",
 		'key' : 'GoFish',
-		'playerStates' : players,
+		'playerState' : players,
 		'gameState' : {
 			'playerTurn' : 1,
 			'deck' : deck,
 			"action" : "cards dealt",
-			
 			'lastRequest': 0.0,
 			'lastRequestedPlayer': "",
 			'requestedCard' : ""
@@ -107,8 +106,6 @@ var is_my_turn : bool = false
 var is_set_up : bool = false
 
 func on_set_up():
-	return
-	
 	is_set_up = true
 	
 	add_to_group("HandListener")
@@ -116,32 +113,51 @@ func on_set_up():
 	
 	ask_panel.hide()
 	
-	for uid in game_state.hands:
-		var hand : Array = game_state.hands[uid]
-		var score : int = game_state.scores[uid]
+	for player_id in player_state:
+		var hand : Array = player_state[player_id]["hand"]
+		var score : int = player_state[player_id]["score"]
 		
 		var hand_node : CardHand = my_hand_node
-		var is_me = uid == GameManager.my_uid
+		var is_me = player_id == GameManager.my_uid
 		
 		if not is_me:
 			hand_node = hand_scene.instantiate()
-			hand_node.name = uid
-			hand_node.hand_name = GameManager.chat_data.members[uid]
+			hand_node.name = player_id
+			hand_node.hand_name = GameManager.chat_data.members[player_id]
 			
 			player_nodes.add_child(hand_node)
 			continue
 		
 		hand_node.update_score( score )
 		hand_node.update_hand( hand, true )
-	
+		
 	on_game_state_update( game_state )
 
+func on_player_state_update( new_player_state ):
+	#vis my passive.
+	get_tree().call_group("PassiveCard", "on_passive_update", 
+	new_player_state[GameManager.my_uid]["passive"])
+	
+	#UPDATE HANDS.
+	for player_id in new_player_state:
+		var hand : Array = player_state[player_id]["hand"]
+		var score : int = player_state[player_id]["score"]
+		
+		var hand_node : CardHand = player_nodes.get_node_or_null(player_id)
+		
+		if not hand_node:
+			hand_node = my_hand_node
+			if hand.filter( func(card): return CARDS.has(card.rank) ).is_empty():
+				draw_card()
+				continue
+		
+		hand_node.update_score( score )
+		hand_node.update_hand( hand )
+	
+	player_state = new_player_state
+
 func on_game_state_update( new_game_state ):
-	return
-	
 	if not is_set_up: return
-	
-	get_tree().call_group("PassiveCard", "on_passive_update", new_game_state.passives[GameManager.my_uid])
 	
 	if not game_state.has("deck"):
 		end_game()
@@ -154,20 +170,6 @@ func on_game_state_update( new_game_state ):
 	status_label.text = ( "Your Turn" if is_my_turn else 
 	"Waiting for "+ GameManager.chat_data.members.values()[new_game_state.playerTurn] )
 	
-	#UPDATE HANDS.
-	for uid in new_game_state.hands:
-		var hand = new_game_state.hands[uid]
-		var score : int = new_game_state.scores[uid]
-		var hand_node : CardHand = player_nodes.get_node_or_null(uid)
-		
-		if not hand_node:
-			hand_node = my_hand_node
-			if hand.filter( func(card): return CARDS.has(card.rank) ).is_empty():
-				draw_card()
-				continue
-		
-		hand_node.update_score( score )
-		hand_node.update_hand( hand )
 	
 	#DISPLAY MESSAGE.
 	if new_game_state.action != game_state.action:
@@ -206,8 +208,6 @@ var elapsed_time := 0.0
 var quick_time_on_going : bool
 
 func _process(_delta):
-	return
-	
 	elapsed_time = abs(game_state.lastRequest - Time.get_unix_time_from_system())
 	
 	if quick_time_on_going != (elapsed_time < REQUEST_TIME):
@@ -222,8 +222,8 @@ func _process(_delta):
 	hand_node.quick_time.visible = quick_time_on_going
 	hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
 
-func get_player_passives(player_id) -> String:
-	return game_state.passives[player_id]
+func get_player_passive(player_id) -> String:
+	return player_state[player_id]["passive"]
 
 var last_card_source : String = "DRAW"
 
@@ -259,33 +259,33 @@ func on_ask(player_name, card_rank):
 	var player_hand : Array = game_state.hands[player_id]
 	var rank_cards : Array = player_hand.filter( func(card): return card.rank == card_rank )
 	
-	var opp_passives : String = get_player_passives(player_id)
+	var opp_passive : String = get_player_passive(player_id)
 	
 	if rank_cards.is_empty():
 		#GO FISH
 		draw_card()
 	else:
-		#remove the card from that player and passives.
+		#remove the card from that player and passive.
 		var new_player_hand = player_hand.filter(
 			func(card): return card.rank != card_rank
 			).filter(
-			func(card): return card.rank != opp_passives)
+			func(card): return card.rank != opp_passive)
 		
-		var passives = player_hand.filter(func(card): return card.rank == opp_passives)
+		var passive = player_hand.filter(func(card): return card.rank == opp_passive)
 		
-		print(passives, " before removal")
+		print(passive, " before removal")
 		
-		if not passives.is_empty():
-			passives.remove_at(0)
-			new_player_hand.append_array(passives)
+		if not passive.is_empty():
+			passive.remove_at(0)
+			new_player_hand.append_array(passive)
 		
-		print(passives, " after removal")
+		print(passive, " after removal")
 		
 		var my_hand = game_state.hands[GameManager.my_uid]
 		
-		if opp_passives == "silver_tongue":
+		if opp_passive == "silver_tongue":
 			#GO FISH
-			print("opponent used: ", opp_passives)
+			print("opponent used: ", opp_passive)
 			
 			#add cards back to deck
 			if game_state.has("deck"):
@@ -294,7 +294,7 @@ func on_ask(player_name, card_rank):
 				game_state.deck.shuffle()
 			
 			cloud_save({ 
-				"passives" : { player_id : "" }, 
+				"passive" : { player_id : "" }, 
 				"hands" : { player_id : new_player_hand }
 			})
 			
@@ -480,8 +480,8 @@ func on_player_selected(player_name):
 func on_power_selected(power):
 	#shouldn't be able to use power when it's your turn.
 	if PASSIVES.has(power):
-		if game_state.passives[GameManager.my_uid] == power: power = ""
-		cloud_save({ "passives" : { GameManager.my_uid : power } })
+		if game_state.passive[GameManager.my_uid] == power: power = ""
+		cloud_save({ "passive" : { GameManager.my_uid : power } })
 		return
 	
 	if is_my_turn:

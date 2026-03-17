@@ -30,12 +30,9 @@ func network_update( args ):
 	call(message, data)
 
 func peer_connected(id):
-	#modal.hide()
 	print("someone joined ", id)
 
 func peer_disconnected(id):
-	#modal.show()
-	#modal.move_to_front()
 	print("someone left ", id)
 
 func on_webrtc_message( args ):
@@ -100,10 +97,14 @@ func start_game(game_data : Dictionary):
 		game_scene.set_up(game_data)
 	
 	game_scene.game_closing = false
-	
 
+#game state.
 func update_game(data):
 	get_tree().call_group("GameScene", "on_game_state_update", data)
+
+#player state.
+func update_players(data):
+	get_tree().call_group("GameScene", "on_player_state_update", data)
 
 #when the user presses the send button.
 func send_game(_data):

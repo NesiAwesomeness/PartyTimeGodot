@@ -2,13 +2,14 @@
 	import { app, game } from '$lib/app.svelte';
 	import { rtdb } from '$lib/firebase';
 	import { onDisconnect, onValue, push, ref, remove, update } from 'firebase/database';
-	import { joinSession, leaveMeshSession, meshState } from '$lib/webrtc';
+	import { broadcast, joinSession, leaveMeshSession, meshState, sendTo } from '$lib/webrtc';
 
 	let isLoaded = $state(false);
 	let iframeRef;
 
 	let { rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
 	let gameStateUnsub;
+	let playerStateUnsub;
 
 	let isGameOpen = $derived(app.currentGame.id !== '');
 	let open = false;
@@ -39,23 +40,15 @@
 
 		const cw = iframeRef.contentWindow;
 
-		// 1. Broadcast: Godot calls this to send a string/array to ALL connected players
 		cw.GodotBroadcastData = (data) => {
-			console.log('This is from Godot to RTC', data);
-
-			for (const peerId in meshState.dataChannels) {
-				const channel = meshState.dataChannels[peerId];
-				if (channel && channel.readyState === 'open') channel.send(data);
-			}
+			console.log('broadcast', data);
+			broadcast(data);
 		};
 
-		// 2. Direct Message: Godot calls this to send data to ONE specific player
 		cw.GodotSendToPlayer = (targetPeerId, data) => {
-			const channel = meshState.dataChannels[targetPeerId];
-			if (channel && channel.readyState === 'open') channel.send(data);
+			sendTo(targetPeerId, data);
 		};
 
-		// 3. Get ID: Godot calls this on startup to know what Player Number it is
 		cw.GetMyGodotId = () => {
 			return meshState.myGodotId;
 		};
@@ -66,6 +59,7 @@
 	// FIREBASE TO GODOT
 	function gameStart() {
 		pushGodot('start_game', app.currentGame.gameData);
+
 		const gameStateRef = ref(
 			rtdb,
 			`chats/${app.currentChat.id}/games/${app.currentGame.id}/gameState/`
@@ -75,6 +69,18 @@
 			const gameState = snapshot.val();
 			if (gameState) {
 				pushGodot('update_game', gameState);
+			}
+		});
+
+		const playerStateRef = ref(
+			rtdb,
+			`chats/${app.currentChat.id}/games/${app.currentGame.id}/playerState/`
+		);
+
+		playerStateUnsub = onValue(playerStateRef, (snapshot) => {
+			const playerState = snapshot.val();
+			if (playerState) {
+				pushGodot('update_players', playerState);
 			}
 		});
 	}
@@ -143,6 +149,7 @@
 		onDisconnect(sessionRef).cancel();
 
 		if (gameStateUnsub) gameStateUnsub();
+		if (playerStateUnsub) playerStateUnsub();
 		leaveMeshSession();
 
 		// 4. Finally, clear my ID
@@ -207,7 +214,7 @@
 	});
 
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-	import { expect } from 'vitest';
+
 	const dispatch = createEventDispatcher();
 </script>
 
