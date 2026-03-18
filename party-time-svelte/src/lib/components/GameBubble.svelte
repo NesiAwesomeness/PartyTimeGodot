@@ -19,7 +19,9 @@
 		isTurnBased ? gameData.gameState.playerTurn != app.currentChat.playerIndex : true
 	);
 
-	let oppName = $derived('Them');
+	let oppName = $derived(
+		app.currentChat.isGroup ? Object.values(app.currentChat.members)[gameData.turn] : 'Them'
+	);
 
 	let whoPlaying = $derived(fromYou ? oppName : 'You');
 	let timestamp = $derived(getDisplayTime(gameData.timestamp));
