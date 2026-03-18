@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bws57ngrxw5q1"]
 
 [ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="1_igcr6"]
+[ext_resource type="Script" uid="uid://b2ypiw801p1dm" path="res://main/games/go-fish/action.gd" id="2_rq1qk"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_kiktm"]
 font = ExtResource("1_igcr6")
@@ -22,8 +23,8 @@ shadow_size = 8
 [node name="Action" type="Label" unique_id=1984348269]
 size_flags_horizontal = 4
 size_flags_vertical = 8
-text = "Brent asked Nesi for 5s"
 label_settings = SubResource("LabelSettings_kiktm")
+script = ExtResource("2_rq1qk")
 
 [node name="Panel" type="Panel" parent="." unique_id=1602910046]
 self_modulate = Color(0.18909413, 0.18909413, 0.18909413, 1)

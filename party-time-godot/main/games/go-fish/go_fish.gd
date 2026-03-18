@@ -95,7 +95,11 @@ func start_game(game_data : Dictionary):
 	add_to_group("CardListener")
 	
 	ask_panel.hide()
-	rng.seed = game_data.get("seed")
+	ask_panel.self_modulate = Color("252525ff")
+	
+	rng.seed = int( game_data.get("seed") )
+	
+	print( int( game_data.get("seed") ) )
 	var hand_size = game_data.get("hand_size")
 	
 	for card_id in CARDS.keys():
@@ -106,6 +110,10 @@ func start_game(game_data : Dictionary):
 				"rank" : card_id,
 				"suite" : suites[i]
 			})
+	
+	#then shuffle...
+	shuffle_deck()
+	shuffle_deck()
 	
 	for member in GameManager.chat_data.members: 
 		players[member] = {}
@@ -125,11 +133,7 @@ func start_game(game_data : Dictionary):
 			hand_node.hand_name = GameManager.chat_data.members[member]
 			player_nodes.add_child(hand_node)
 	
-	#then shuffle...
-	shuffle_deck()
-	#shuffle twice...
-	shuffle_deck()
-	
+
 	print( game_data.get("dealer") , " just dealt the cards")
 	update_turn( int( game_data.get("turn") ) )
 	
@@ -185,11 +189,12 @@ func apply_move( move, _set_up:bool=false ):
 				#we are being asked.
 				if move.target == GameManager.my_uid:
 					my_hand_node.shake_card( move.rank )
-				
-				action_message(
-					str(get_player_name(move.player), " is asking ", 
-					get_player_name(move.target), " for some ", CARDS[move.rank].name)
-				)
+			
+			action_message(
+				str(get_player_name(move.player), " is asking ", 
+				get_player_name(move.target), " for some ", CARDS[move.rank].name),
+				Color(0.235, 0.286, 0.428, 0.773)
+			)
 		MOVES.TAKE:
 			var ranks : Array = players[move.target]["hand"].filter( func(card): return card.rank == move.rank )
 			
@@ -356,7 +361,21 @@ func check_game():
 		end_game()
 
 func end_game():
-	pass
+	turn = 0
+	is_my_turn = false
+	
+	var winning_score = -1
+	var winners : Array = []
+	
+	for player in players:
+		var score = players[player]['score']
+		if score > winning_score:
+			winning_score = score
+			winners = [player]
+		elif score == winning_score:
+			winners.append(player)
+	
+	for winner in winners: action_message(str( get_player_name(winner), " Won with ", winning_score, " points!"))
 
 func draw_from_deck(target_id : String):
 	action_message( str(get_player_name(target_id), " went fishing.") )
@@ -406,15 +425,16 @@ func _process(_delta):
 	hand_node.quick_time.visible = quick_time_on_going
 	hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
 
-func action_message(message : String, bruh:bool=false):
-	if not bruh: if move_index < move_count - 4: return
+func action_message(message : String, color:Color=Color('303030ff')):
+	if move_index < move_count - 4: return
 
-	var action_label : Label = action_label_scene.instantiate()
+	var action_label : ActionLabel = action_label_scene.instantiate()
+	action_label.set_up(color)
 	action_labels.add_child(action_label)
 	action_label.text = message
 	
-	create_tween().tween_property(action_label, "modulate:a", 0.0, 1.0).set_delay(10.0)
-	create_tween().tween_callback( action_label.queue_free ).set_delay(10.0)
+	create_tween().tween_property(action_label, "modulate:a", 0.0, 3.0).set_delay(10.0)
+	create_tween().tween_callback( action_label.queue_free ).set_delay(13.0)
 
 func shuffle_deck():
 	for i in range(deck.size() - 1, 0, -1):
@@ -518,10 +538,13 @@ func on_power_selected(power):
 	selected_power_up = power
 	
 	request_label.text = str("Using ", power, " on...")
+	ask_panel.self_modulate = Color("db3f39ff")
 	set_power_use_text()
 
 func on_card_selected(rank):
 	selected_rank = rank
+	
+	ask_panel.self_modulate = Color("252525ff")
 	set_up_ask_text()
 
 func on_send_ask_pressed():
