@@ -30,8 +30,6 @@ func update_score(score):
 func update_hand(new_hand : Array, on_set_up : bool = false):
 	score_tag.show()
 	
-	print(new_hand)
-	
 	if is_me:
 		var cards_to_remove : Array = hand.filter(func(card): return not new_hand.has(card))
 		hand = new_hand
