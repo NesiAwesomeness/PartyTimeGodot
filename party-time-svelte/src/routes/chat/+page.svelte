@@ -91,11 +91,14 @@
 
 		isGameOpen = true;
 
+		const targetWidth = document.body.clientWidth;
+		const targetHeight = document.body.clientHeight;
+
 		holderBounds.set({
 			x: 0,
 			y: 0,
-			w: window.innerWidth,
-			h: window.innerHeight,
+			w: targetWidth,
+			h: targetHeight,
 			o: 1.0,
 			r: 0.0
 		});
