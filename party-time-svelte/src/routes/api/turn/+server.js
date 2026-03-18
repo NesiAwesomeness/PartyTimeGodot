@@ -22,13 +22,13 @@ export async function GET() {
 			const urlsString = JSON.stringify(server.urls);
 
 			if (urlsString.includes('stun:')) {
-				if (stunCount >= 1) return false; // Only keep ONE STUN
+				if (stunCount >= 2) return false; // Only keep ONE STUN
 				stunCount++;
 				return true;
 			}
 
 			if (urlsString.includes('turn:') || urlsString.includes('turns:')) {
-				if (turnCount >= 1) return false; // Only keep ONE TURN
+				if (turnCount >= 0) return false; // Only keep ONE TURN
 				turnCount++;
 				return true;
 			}

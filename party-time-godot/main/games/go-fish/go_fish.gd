@@ -117,6 +117,8 @@ func on_new_move( move : Dictionary ):
 	print( move, " last move")
 	apply_move( move )
 	
+	if move_index < move_count: return
+	
 	#update the visuals.
 	for player in players:
 		var hand : Array = players[player]["hand"]
