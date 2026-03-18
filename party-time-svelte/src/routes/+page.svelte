@@ -24,7 +24,7 @@
 
 		event.preventDefault();
 		signInWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
-			.then(toast.success(`Welcome @${userName.toLowerCase()}!`))
+			.then()
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
@@ -32,7 +32,10 @@
 					toast.error('Wrong Username or password :(');
 				}
 			})
-			.finally(() => (isLoading = false));
+			.finally(() => {
+				toast.success(`Welcome @${userName.toLowerCase()}!`);
+				isLoading = false;
+			});
 	}
 
 	function handleRegister(event) {
@@ -40,12 +43,16 @@
 
 		event.preventDefault();
 		createUserWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
-			.then(toast.success(`Welcome @${userName.toLowerCase()}!`))
+			.then()
 			.catch((error) => {
 				const errorCode = error.code;
 				const errorMessage = error.message;
+				toast.error(error.message);
 			})
-			.finally(() => (isLoading = false));
+			.finally(() => {
+				toast.success(`Welcome @${userName.toLowerCase()}!`);
+				isLoading = false;
+			});
 	}
 </script>
 

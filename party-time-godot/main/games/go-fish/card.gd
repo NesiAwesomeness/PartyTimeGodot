@@ -50,6 +50,8 @@ func update_count(_count : int):
 			position_tween.chain().tween_property(card_body, "position:y", 0.0, duration * 3.0)
 	count = _count
 
+var active = false
+
 #this can only be called by cards for "ME"
 func set_up(card : Dictionary):
 	is_power_card = not GoFish.CARDS.has(card.rank)
@@ -62,17 +64,16 @@ func set_up(card : Dictionary):
 	
 	var card_name : String = GoFish.PASSIVES.merged(GoFish.POWERS)[rank] if is_power_card else GoFish.CARDS[rank].name
 	if not is_power_card:
-		match card.suite:
-			"R": card_body.self_modulate = Color("db3f39ff")
-			"B": card_body.self_modulate = Color("4665d3ff")
-			"G": card_body.self_modulate = Color("46943fff")
-			"Y": card_body.self_modulate = Color("d49936ff")
+		card_body.self_modulate = Color("6780baff")
 	else:
 		if GoFish.PASSIVES.has(rank):
 			add_to_group("PassiveCard")
-		
-		#should always be able to select them.
-		card_body.self_modulate = Color("626c60ff")
+			card_body.self_modulate = Color("647843ff")
+		else:
+			#should always be able to select them.
+			
+			tooltip_text = "swap a random rank with someone?"
+			card_body.self_modulate = Color("db3f39ff")
 	
 	for label : RichTextLabel in card_vis.get_children():
 		label.text = str("[wave]",card_name,"[/wave]") if is_power_card else card_name
@@ -97,10 +98,15 @@ func on_player_deselected():
 	if not is_power_card: selection.disabled = true
 
 func on_passive_update(passive : String):
-	if passive == rank:
-		card_body.position.y = -32.0
-	else:
-		card_body.position.y = 0.0
+	active = passive == rank
+	card_body.position.y = -32.0 if active else 0.0
+	
+	var tip = "Passive card."
+	match passive:
+		"silver_tongue":
+			tip = "Block the next ask?"
+	
+	tooltip_text = tip + ", Click to" + (" activate this." if active else " deactivate this")
 
 func hand_updated(is_me : bool):
 	var center_index : float = (get_parent().get_child_count() - 1) / 2.0

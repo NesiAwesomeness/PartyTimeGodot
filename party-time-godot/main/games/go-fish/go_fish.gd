@@ -34,7 +34,8 @@ const CARDS = {
 	"boots": { "name": "Old Boots", "tier": Tier.STANDARD, "points": 1},
 	"coins": { "name": "Rusty Coins", "tier": Tier.STANDARD, "points": 1},
 	"soggy_socks": { "name": "Soggy Socks", "tier": Tier.STANDARD, "points": 1 },
-	"tin_cans": { 'name': "Tin Cans", 'tier': Tier.STANDARD, 'points': 1 },
+	"tin_cans": { 'name': "Tin Can", 'tier': Tier.STANDARD, 'points': 1 },
+	"empty_mustard": { 'name': "Mustard Can", 'tier': Tier.STANDARD, 'points': 1 },
 	"fishbones": { 'name': "Fish Bones", 'tier': Tier.STANDARD, 'points': 1 },
 	"salmon": { 'name': "Salmon", 'tier': Tier.STANDARD, 'points': 1 },
 	"rubber_duck": { 'name': "Rubber Duck", 'tier': Tier.STANDARD, 'points': 1 },
@@ -124,7 +125,9 @@ func start_game(game_data : Dictionary):
 			hand_node.hand_name = GameManager.chat_data.members[member]
 			player_nodes.add_child(hand_node)
 	
-	#then shuffle
+	#then shuffle...
+	shuffle_deck()
+	#shuffle twice...
 	shuffle_deck()
 	
 	print( game_data.get("dealer") , " just dealt the cards")
@@ -205,12 +208,7 @@ func apply_move( move, _set_up:bool=false ):
 				match target_passive:
 					"silver_tongue": #use silver tongue
 						#They'll drop all their cards.
-						var new_player_hand = players[move.target]["hand"].filter(func(card): return card.rank != move.rank)
-						var cards = players[move.target]["hand"].filter(func(card): return card.rank == move.rank)
-						
-						deck.append_array(cards)
-						shuffle_deck()
-						players[move.target]["hand"] = new_player_hand
+						action_message(str(get_player_name(move.target), " used block!"))
 						
 						#I'll draw.
 						draw_from_deck( move.player )
@@ -222,11 +220,10 @@ func apply_move( move, _set_up:bool=false ):
 						players[move.target]["hand"] = players[move.target]["hand"].filter( 
 							func(card): return card.rank != move.rank )
 						
-						if not _set_up:
-							action_message(
-								str(get_player_name(move.player), " took ", 
-								CARDS[move.rank].name, " from ", get_player_name(move.target))
-							)
+						action_message(
+							str(get_player_name(move.player), " took ", 
+							CARDS[move.rank].name, " from ", get_player_name(move.target))
+						)
 		MOVES.PASSIVE:
 			var activate = players[move.player]["passive"] == ''
 			players[move.player]["passive"] = move.passive if activate else ''
@@ -342,12 +339,16 @@ func check_game():
 				player["score"] += CARDS[rank]["points"]
 				if me:
 					booked_cards.append(rank)
+					
+					action_message( str( get_player_name(id), " just completed ", CARDS[rank]["name"] ) )
 					print("BOOK! ", CARDS[rank]["name"])
 		
-		if player['hand'].is_empty():
-			draw_from_deck(id)
-			
+		var _hand : Array = player['hand'].filter( 
+			func(card): return CARDS.has(card.rank) 
+		)
 		
+		if _hand.is_empty():
+			draw_from_deck(id)
 		players[id] = player
 	
 	#if deck has finished end game.
@@ -365,13 +366,18 @@ func draw_from_deck(target_id : String):
 	if target_id == GameManager.my_uid: action_message( str("I got ", CARDS[new_card.rank].name) )
 	
 	#roll a dice to get a power up
-	if rng.randi() % 2 == 0:
+	if rng.randi() % 3 == 0:
 		var pool : Dictionary = POWERS.merged(PASSIVES)
 		var power_card = { "rank" : pool.keys()[rng.randi() % pool.size()], "suite" : "R" }
-		
+	
 		#if they don't already have it
 		if not players[target_id]['hand'].has(power_card):
 			players[target_id]['hand'].append( power_card )
+			
+			if target_id != GameManager.my_uid:
+				action_message( str( get_player_name(target_id), " found something special!") )
+	
+	action_message( str( deck.size(), " cards left in the deck") )
 
 func get_next_turn( _turn ) -> int:
 	return wrapi( _turn + 1, 0, int(GameManager.chat_data.memberCount) )
@@ -407,8 +413,8 @@ func action_message(message : String, bruh:bool=false):
 	action_labels.add_child(action_label)
 	action_label.text = message
 	
-	create_tween().tween_property(action_label, "modulate:a", 0.0, 1.0).set_delay(6.0)
-	create_tween().tween_callback(action_label.queue_free).set_delay(6.0)
+	create_tween().tween_property(action_label, "modulate:a", 0.0, 1.0).set_delay(10.0)
+	create_tween().tween_callback( action_label.queue_free ).set_delay(10.0)
 
 func shuffle_deck():
 	for i in range(deck.size() - 1, 0, -1):
@@ -458,7 +464,7 @@ func on_ask(player_name, card_rank):
 func on_power(player_name, power):
 	var target_id : String = get_player_id(player_name)
 	
-	if quick_time_on_going and target_id == game_state.lastRequestedPlayer:
+	if quick_time_on_going and target_id == target_player_id:
 		print("I can't use powers on ", player_name, " right now")
 		return
 	
