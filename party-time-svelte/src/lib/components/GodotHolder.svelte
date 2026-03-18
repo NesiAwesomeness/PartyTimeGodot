@@ -260,7 +260,7 @@
 	>
 	</iframe>
 	<div
-		class="col-start-1 row-start-1 flex absolute flex-col justify-self-end justify-between h-[calc(100vh-72px)] m-[36px]"
+		class="col-start-1 row-start-1 flex absolute flex-col justify-self-end justify-between h-[calc(100dvh-72px)] m-[36px]"
 	>
 		<button
 			title="Close Game"
