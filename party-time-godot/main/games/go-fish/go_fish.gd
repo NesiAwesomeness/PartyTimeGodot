@@ -166,7 +166,7 @@ func display_cards():
 		hand_node.update_score( score )
 		hand_node.update_hand( hand )
 	
-	print("My passive is ", players[GameManager.my_uid]["passive"])
+	#print("My passive is ", players[GameManager.my_uid]["passive"])
 	get_tree().call_group("PassiveCard", "on_passive_update", players[GameManager.my_uid]["passive"])
 
 var request_timestamp := 0.0
@@ -201,7 +201,7 @@ func apply_move( move, _set_up:bool=false ):
 			#get the passive of the target
 			var target_passive : String = get_player_passive(move.target)
 			
-			print(get_player_name(move.target), "'s passive is ", target_passive)
+			#print(get_player_name(move.target), "'s passive is ", target_passive)
 			
 			#GoFish
 			if ranks.is_empty():
@@ -233,7 +233,7 @@ func apply_move( move, _set_up:bool=false ):
 			var activate = players[move.player]["passive"] == ''
 			players[move.player]["passive"] = move.passive if activate else ''
 			
-			print(get_player_name(move.player), "'s passive is now ", players[move.player]["passive"])
+			#print(get_player_name(move.player), "'s passive is now ", players[move.player]["passive"])
 			
 			if move.player == GameManager.my_uid:
 				can_send_passive = true
@@ -426,7 +426,7 @@ func _process(_delta):
 	hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
 
 func action_message(message : String, color:Color=Color('303030ff')):
-	if move_index < move_count - 4: return
+	if move_index < move_count - 2: return
 
 	var action_label : ActionLabel = action_label_scene.instantiate()
 	action_label.set_up(color)
