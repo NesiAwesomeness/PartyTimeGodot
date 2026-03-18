@@ -40,5 +40,6 @@
 	:global(body) {
 		overflow: hidden;
 		font-family: 'Funnel Display', sans-serif;
+		height: 100dvh;
 	}
 </style>

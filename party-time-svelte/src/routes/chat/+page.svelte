@@ -301,14 +301,14 @@
 	</div>
 </Modal>
 
-<div class="absolute w-screen h-screen bg-[#1c1c1c]">
+<div class="absolute w-screen h-dvh bg-[#1c1c1c]">
 	<!-- Custom aspect ratio AND max-width modifiers replacing portrait/landscape -->
 	<div
 		class="grid box-border gap-2 [@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-flow-col
 		[@media(min-width:650px)_and_(min-aspect-ratio:4/5)]:grid-cols-[auto_1fr] [@media(max-width:649px),(max-aspect-ratio:4/5)]:grid-cols-1 w-full h-full p-2"
 	>
 		{#if app.uid === ''}
-			<div class="flex justify-center items-center w-screen h-screen"><Loader size={64} /></div>
+			<div class="flex justify-center items-center w-screen h-dvh"><Loader size={64} /></div>
 		{:else}
 			<!-- Chat View -->
 			<div
