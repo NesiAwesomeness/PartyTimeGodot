@@ -50,6 +50,8 @@ func start_game(game_data : Dictionary):
 		print("Game Unavailable")
 		return
 	
+	get_time()
+	
 	var game_scene : GameScene = get_node_or_null(game_data.key)
 	if not game_scene:
 		game_scene = game_scenes[game_data.key].instantiate()
@@ -116,6 +118,15 @@ func on_webrtc_message( args ):
 			return
 		return
 
+#this gets the browsers timestamp.
+static func get_time():
+	var window = JavaScriptBridge.get_interface("window")
+	var timestamp = window.getTime()
+	
+	print("Godot time is ", Time.get_unix_time_from_system())
+	print("Browser time is ", timestamp)
+	
+	return timestamp
 
 static func broadcast_webrtc(payload):
 	print("trying to send rtc")

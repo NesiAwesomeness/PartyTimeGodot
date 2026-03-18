@@ -61,6 +61,10 @@
 			sendTo(targetPeerId, data);
 		};
 
+		cw.getTime = () => {
+			return Date.now();
+		};
+
 		cw.GetMyGodotId = () => {
 			return meshState.myGodotId;
 		};
