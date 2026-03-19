@@ -10,7 +10,6 @@ var hand : Array
 @export var name_tag : Label
 @export var score_tag : Label
 
-@export var button : Button
 @export var summary : Control
 @export var summary_label : Label
 
@@ -20,17 +19,17 @@ func _ready():
 	name_tag.text = hand_name
 	if is_me:
 		name_tag.hide()
-		button.queue_free()
 		return
-	button.pressed.connect(on_button_pressed)
 
 func update_score(score):
 	score_tag.text = str( int(score) ) 
 
-func update_hand(new_hand : Array, on_set_up : bool = false):
+func update_hand(new_hand : Array, block_list:Array=[]):
 	score_tag.show()
 	
 	if is_me:
+		hand_container.custom_minimum_size.y = 180
+		
 		var cards_to_remove : Array = hand.filter(func(card): return not new_hand.has(card))
 		hand = new_hand
 		
@@ -38,8 +37,13 @@ func update_hand(new_hand : Array, on_set_up : bool = false):
 		for card in new_hand:
 			var card_node : Card = hand_container.get_node_or_null(card.rank)
 			if card_node:
-				card_node.animate = not on_set_up
-				card_node.update_count( new_hand.filter(func(c): return c.rank == card.rank).size() )
+				card_node.animate = true
+				print("Ummm...", card.rank, block_list.has(card.rank), block_list)
+				
+				card_node.update_count( 
+					new_hand.filter(func(c): return c.rank == card.rank).size(), block_list.has(card.rank)
+				)
+				
 				continue
 			
 			card_node = card_scene.instantiate()
@@ -47,6 +51,11 @@ func update_hand(new_hand : Array, on_set_up : bool = false):
 			
 			hand_container.add_child(card_node)
 			card_node.tree_exited.connect(arrange_cards)
+			
+			card_node.rearrange.connect( func(index):
+				hand_container.move_child(card_node, index)
+				arrange_cards()
+			)
 			card_node.set_up(card)
 		
 		for card in cards_to_remove:
@@ -55,16 +64,21 @@ func update_hand(new_hand : Array, on_set_up : bool = false):
 		
 	else:
 		#not my hand
+		hand_container.custom_minimum_size.y = 128
+		
 		var s = new_hand.filter(func(card): return GoFish.CARDS.has(card.rank)).size()
-		summary.visible = s > 4
-		summary_label.text = str("+", s-4)
+		summary.visible = s > 3
+		summary_label.text = str("+", s-3)
 		
 		var card_count = hand_container.get_child_count()
-		var difference = card_count - min( s, 4 )
+		var difference = card_count - min( s, 3 )
 		
 		if difference != 0: for i in abs(difference):
 			if difference < 0:
-				hand_container.add_child(card_scene.instantiate())
+				var card_node : Card = card_scene.instantiate()
+				card_node.scale = Vector2.ONE * 0.75
+				
+				hand_container.add_child( card_node )
 			elif hand_container.get_child_count() != 0:
 				hand_container.get_child(0).queue_free()
 		
@@ -96,6 +110,3 @@ func shake_card( _rank ):
 func arrange_cards():
 	for card_node : Card in hand_container.get_children():
 		card_node.hand_updated(is_me)
-
-func on_button_pressed():
-	if not is_me: get_tree().call_group("HandListener", "on_player_selected", hand_name)

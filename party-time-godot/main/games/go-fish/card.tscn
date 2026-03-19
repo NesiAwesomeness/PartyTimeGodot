@@ -21,8 +21,19 @@ expand_margin_bottom = 24.0
 
 [sub_resource type="LabelSettings" id="LabelSettings_gv53k"]
 font = ExtResource("2_66do0")
+font_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gv53k"]
+bg_color = Color(0.39215687, 0.47058824, 0.2627451, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_top = 24.0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wrska"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gv53k"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66do0"]
 draw_center = false
@@ -42,7 +53,7 @@ expand_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_66do0"]
 
-[node name="Control" type="Control" unique_id=90307872 node_paths=PackedStringArray("card_vis", "selection", "count_label", "number", "number_panel", "card_body", "card_holder")]
+[node name="Control" type="Control" unique_id=90307872 node_paths=PackedStringArray("card_vis", "selection", "count_label", "number", "number_panel", "card_body", "card_holder", "protection_label")]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_wrska")
@@ -53,17 +64,18 @@ number = NodePath("Holder/Card/Number")
 number_panel = NodePath("Holder/Card/Number/PanelContainer")
 card_body = NodePath("Holder/Card")
 card_holder = NodePath("Holder")
+protection_label = NodePath("Holder/Card/Protection")
 
 [node name="Holder" type="Control" parent="." unique_id=1631475288]
 layout_mode = 1
 anchors_preset = 0
 offset_right = 40.0
-offset_bottom = 120.0
+offset_bottom = 180.0
 pivot_offset_ratio = Vector2(0, 1)
 
 [node name="Card" type="PanelContainer" parent="Holder" unique_id=1948303595]
 self_modulate = Color(0.27057132, 0.33519793, 0.7124387, 1)
-custom_minimum_size = Vector2(100, 132)
+custom_minimum_size = Vector2(132, 180)
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -72,7 +84,7 @@ offset_left = -72.0
 offset_right = 32.0
 offset_bottom = 132.0
 grow_horizontal = 2
-pivot_offset = Vector2(52, 66)
+pivot_offset_ratio = Vector2(0.5, 0.5)
 theme_override_styles/panel = SubResource("StyleBoxFlat_ty8dp")
 
 [node name="Number" type="Control" parent="Holder/Card" unique_id=1620388699]
@@ -105,6 +117,36 @@ size_flags_vertical = 0
 text = "2 of 3"
 label_settings = SubResource("LabelSettings_gv53k")
 
+[node name="Protection" type="Control" parent="Holder/Card" unique_id=1294414809]
+visible = false
+show_behind_parent = true
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="PanelContainer" type="PanelContainer" parent="Holder/Card/Protection" unique_id=417115989]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 29.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_gv53k")
+
+[node name="LabelMargin" type="MarginContainer" parent="Holder/Card/Protection/PanelContainer" unique_id=175167510]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 2
+
+[node name="Label" type="RichTextLabel" parent="Holder/Card/Protection/PanelContainer/LabelMargin" unique_id=288767169]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_66do0")
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
+text = "[wave]Protected!"
+autowrap_mode = 2
+
 [node name="Margin" type="MarginContainer" parent="Holder/Card" unique_id=766777781]
 layout_mode = 2
 theme_override_constants/margin_left = 12
@@ -116,6 +158,7 @@ theme_override_constants/margin_bottom = 12
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("2_66do0")
+theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "Fishbones"
 autowrap_mode = 2
@@ -123,5 +166,8 @@ autowrap_mode = 2
 [node name="Selectable" type="Button" parent="Holder/Card" unique_id=1077289270]
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_wrska")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_gv53k")
 theme_override_styles/hover = SubResource("StyleBoxFlat_66do0")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_66do0")
+
+[connection signal="gui_input" from="Holder/Card/Selectable" to="." method="_on_selectable_gui_input"]

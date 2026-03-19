@@ -1,7 +1,6 @@
 extends PanelContainer
 
 signal use_power(player, power)
-signal use_passive(passive)
 signal ask(player, rank)
 
 var ask_mode := false
@@ -16,7 +15,6 @@ var ask_mode := false
 @export var player_list : VBoxContainer
 @export var player_select_menu : Control
 @export var player_select : Control
-
 @export var player_select_menu_button : Button
 @export var select_panel : PanelContainer
 
@@ -26,7 +24,6 @@ var selected_rank = ''
 
 func _ready():
 	add_to_group("CardListener")
-	add_to_group("PlayerSelectListener")
 	
 	send_button.pressed.connect( on_send_pressed )
 	player_select_menu_button.pressed.connect( open_player_select_menu )
@@ -68,7 +65,7 @@ func _input(event):
 func open_player_select_menu():
 	if single_option != '': return
 	
-	print("opening...")
+	#print("opening...")
 	show()
 	
 	player_name_label.text = "Select Player"
@@ -94,11 +91,14 @@ func on_player_selected(player_name):
 	send_control.show()
 
 func on_card_selected(rank):
-	if rank == '': return
+	if rank == '':
+		reset()
+		return
 	if single_option != '': send_control.show()
 	
 	if GoFish.PASSIVES.has(rank):
-		use_passive.emit(rank)
+		request_label.text = "[wave] Drag and Drop over any card. [/wave]"
+		self_modulate = Color("647843ff")
 		return
 	
 	var power_card = not GoFish.CARDS.has(rank)
@@ -141,7 +141,7 @@ func on_send_pressed():
 			return
 		
 		use_power.emit(selected_player_name, selected_rank)
-		print("I'm using powers on ", selected_player_name)
+		#print("I'm using powers on ", selected_player_name)
 	
 	reset()
 
@@ -155,7 +155,7 @@ func reset():
 	reset_player()
 
 func reset_player():
-	print(single_option, " one option")
+	#print(single_option, " one option")
 	
 	selected_player_name = "" if single_option == '' else single_option
 	player_select_menu_button.visible = single_option == ''

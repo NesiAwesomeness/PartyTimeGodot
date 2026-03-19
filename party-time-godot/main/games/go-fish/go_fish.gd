@@ -111,6 +111,9 @@ func start_game(game_data : Dictionary):
 		players[member]["score"] = 0
 		players[member]["passive"] = ""
 		
+		#this is a list of cards that will be blocked if asked for.
+		players[member]["block_list"] = []
+		
 		if member != GameManager.my_uid:
 			#add opponent visuals.
 			var hand_node : CardHand = hand_scene.instantiate()
@@ -118,7 +121,6 @@ func start_game(game_data : Dictionary):
 			hand_node.hand_name = GameManager.chat_data.members[member]
 			player_nodes.add_child(hand_node)
 	
-
 	print( game_data.get("dealer") , " just dealt the cards")
 	update_turn( int( game_data.get("turn") ) )
 	
@@ -147,11 +149,14 @@ func display_cards():
 		var hand_node : CardHand = player_nodes.get_node_or_null(player)
 		if not hand_node:
 			hand_node = my_hand_node
+			my_hand_node.update_hand( hand, players[player]['block_list'] )
+		else:
+			hand_node.update_hand( hand )
 		
 		hand_node.update_score( score )
-		hand_node.update_hand( hand )
 	
 	#print("My passive is ", players[GameManager.my_uid]["passive"])
+	
 	get_tree().call_group("PassiveCard", "on_passive_update", players[GameManager.my_uid]["passive"])
 
 var request_timestamp := 0.0
@@ -159,8 +164,6 @@ static var target_player_id := ''
 
 var elapsed_time := 0.0
 static var quick_time_on_going : bool
-
-var can_send_passive = true
 
 func apply_move( move, _set_up:bool=false ):
 	var move_type : MOVES = int(move.type) as MOVES
@@ -186,42 +189,37 @@ func apply_move( move, _set_up:bool=false ):
 			#get the passive of the target
 			var target_passive : String = get_player_passive(move.target)
 			
-			#print(get_player_name(move.target), "'s passive is ", target_passive)
+			var block_list : Array = players[move.target]["block_list"]
+			print(get_player_name(move.target), "'s passive is ", target_passive)
 			
 			#GoFish
 			if ranks.is_empty():
 				draw_from_deck( move.player )
 				update_turn( get_next_turn( turn ) )
 			else:
-				#remove the passive from the target
-				delete_one_card(target_passive, move.target)
-				match target_passive:
-					"silver_tongue": #use silver tongue
-						#They'll drop all their cards.
-						action_message(str(get_player_name(move.target), " used block!"))
-						
-						#I'll draw.
-						draw_from_deck( move.player )
-						
-						#Move the turn
-						update_turn( get_next_turn(turn) )
-					"": #no passive
-						players[move.player]["hand"].append_array(ranks)
-						players[move.target]["hand"] = players[move.target]["hand"].filter( 
-							func(card): return card.rank != move.rank )
-						
-						action_message(
-							str(get_player_name(move.player), " took ", 
-							CARDS[move.rank].name, " from ", get_player_name(move.target))
-						)
+				if block_list.has(move.rank):
+					#remove rank from block list
+					players[move.target]["block_list"] = block_list.filter(func(rank): return rank != move.rank)
+					
+					#Player will draw.
+					draw_from_deck( move.player )
+					action_message(str(get_player_name(move.target), " used block!"))
+					
+					#Move the turn
+					update_turn( get_next_turn(turn) )
+				else: #no block
+					players[move.player]["hand"].append_array(ranks)
+					players[move.target]["hand"] = players[move.target]["hand"].filter( 
+						func(card): return card.rank != move.rank )
+					
+					action_message(
+						str(get_player_name(move.player), " took ", 
+						CARDS[move.rank].name, " from ", get_player_name(move.target))
+					)
 		MOVES.PASSIVE:
-			var activate = players[move.player]["passive"] == ''
-			players[move.player]["passive"] = move.passive if activate else ''
-			
-			#print(get_player_name(move.player), "'s passive is now ", players[move.player]["passive"])
-			
-			if move.player == GameManager.my_uid:
-				can_send_passive = true
+			delete_one_card(move.passive, move.player)
+			match move.passive:
+				"silver_tongue": players[move.player]["block_list"].append(move.rank)
 		MOVES.USE:
 			delete_one_card(move.power, move.player)
 			var pool = PASSIVES.merged(POWERS)
@@ -419,8 +417,10 @@ func action_message(message : String, color:Color=Color('303030ff')):
 	action_labels.add_child(action_label)
 	action_label.text = message
 	
-	create_tween().tween_property(action_label, "modulate:a", 0.0, 3.0).set_delay(10.0)
-	create_tween().tween_callback( action_label.queue_free ).set_delay(13.0)
+	var tween = create_tween()
+	
+	tween.tween_property(action_label, "modulate:a", 0.0, 3.0).set_delay(10.0)
+	tween.chain().tween_callback( action_label.queue_free )
 
 func shuffle_deck():
 	for i in range(deck.size() - 1, 0, -1):
@@ -469,10 +469,8 @@ func on_ask_panel_ask(player, rank):
 	
 	on_ask(player, rank)
 
-func on_ask_panel_use_passive(passive):
-	if can_send_passive:
-		make_move({"player" : GameManager.my_uid, "passive" : passive, "type" : MOVES.PASSIVE})
-		can_send_passive = false
+func on_passive_use(passive, target_rank):
+	make_move({"player" : GameManager.my_uid, "passive" : passive, "type" : MOVES.PASSIVE, "rank": target_rank})
 
 func on_ask_panel_use_power(player, power):
 	var target_id : String = get_player_id(player)

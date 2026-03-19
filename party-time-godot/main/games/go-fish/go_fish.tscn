@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="4_5ubho"]
 [ext_resource type="Script" uid="uid://dm5gv3mmc1ybt" path="res://main/games/go-fish/ask_panel.gd" id="4_5xxos"]
 [ext_resource type="PackedScene" uid="uid://du8upkqwop5yl" path="res://main/games/go-fish/player_select_button.tscn" id="6_5xxos"]
+[ext_resource type="Script" uid="uid://ce15pgbp7jjr8" path="res://main/games/go-fish/tooltip.gd" id="8_seqg7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kiktm"]
 bg_color = Color(1, 1, 1, 1)
@@ -30,7 +31,7 @@ corner_radius_bottom_left = 8
 
 [sub_resource type="LabelSettings" id="LabelSettings_seqg7"]
 font = ExtResource("4_5ubho")
-font_size = 20
+font_size = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5xxos"]
 
@@ -40,6 +41,23 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_4g1dd"]
+font = ExtResource("4_5ubho")
+font_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_seqg7"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 16.0
+expand_margin_top = 8.0
+expand_margin_right = 16.0
+expand_margin_bottom = 8.0
+shadow_color = Color(0, 0, 0, 0.0627451)
+shadow_size = 8
 
 [node name="GoFish" type="Node" unique_id=1464147714 node_paths=PackedStringArray("player_nodes", "my_hand_node", "action_labels", "status_label")]
 script = ExtResource("1_6o1i6")
@@ -120,7 +138,7 @@ theme_override_constants/separation = 8
 z_index = 3
 layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("4_5ubho")
-theme_override_font_sizes/normal_font_size = 24
+theme_override_font_sizes/normal_font_size = 32
 bbcode_enabled = true
 text = "I need some BBC from"
 fit_content = true
@@ -172,7 +190,7 @@ anchor_bottom = 1.0
 offset_left = -64.0
 offset_top = -156.0
 offset_right = 64.0
-offset_bottom = 8.0
+offset_bottom = 16.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -190,7 +208,7 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_bottom = 8
 
 [node name="PlayerList" type="VBoxContainer" parent="Me/HBoxContainer/AskPanel/MarginContainer/HBoxContainer/MarginContainer/PlayerSelect/Control/Margin/PlayerSelectPanel/Margin" unique_id=712942867]
-custom_minimum_size = Vector2(124, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 8
@@ -220,9 +238,6 @@ visible = false
 [node name="Score" parent="Me/HBoxContainer/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="1" unique_id=414416212]
 visible = false
 
-[node name="Button" parent="Me/HBoxContainer/Hand" index="2" unique_id=316015903]
-visible = false
-
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=12555329]
 anchors_preset = 10
 anchor_right = 1.0
@@ -245,8 +260,36 @@ offset_bottom = 59.916664
 grow_horizontal = 2
 text = "Your turn"
 
+[node name="Control" type="Control" parent="." unique_id=785488042]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Tooltip" type="Label" parent="Control" unique_id=330066413]
+visible = false
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+offset_right = 40.0
+grow_vertical = 0
+pivot_offset_ratio = Vector2(0, 1)
+text = "Balls"
+label_settings = SubResource("LabelSettings_4g1dd")
+script = ExtResource("8_seqg7")
+
+[node name="Panel" type="Panel" parent="Control/Tooltip" unique_id=2057757591]
+self_modulate = Color(0.18909413, 0.18909413, 0.18909413, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_seqg7")
+
 [connection signal="ask" from="Me/HBoxContainer/AskPanel" to="." method="on_ask_panel_ask"]
-[connection signal="use_passive" from="Me/HBoxContainer/AskPanel" to="." method="on_ask_panel_use_passive"]
 [connection signal="use_power" from="Me/HBoxContainer/AskPanel" to="." method="on_ask_panel_use_power"]
 
 [editable path="Me/HBoxContainer/Hand"]
