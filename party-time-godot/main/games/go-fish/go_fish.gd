@@ -7,18 +7,10 @@ signal quick_time_concluded
 @export var player_nodes : Node
 @export var my_hand_node : CardHand
 
-@export_category("Ask")
-@export var ask_panel : Control
-@export var request_label : Label
-
 @export_category("Actions")
 @export var action_labels : VBoxContainer
 @export var action_label_scene : PackedScene
 @export var status_label : Label
-
-static var selected_player_name = ""
-static var selected_rank = ""
-static var selected_power_up = ""
 
 const REQUEST_TIME = 2.5
 
@@ -62,7 +54,7 @@ const PASSIVES = {
 }
 
 var turn = 1
-var is_my_turn : bool = false
+static var is_my_turn : bool = false
 var deck : Array = []
 
 #this contains a list of cards that I have booked.
@@ -73,16 +65,13 @@ enum MOVES {
 }
 
 func initialize_game() -> Dictionary:
-	var my_name = get_player_name(GameManager.my_uid)
-	
 	return {
 		'name' : "Go Fish",
 		'key' : 'GoFish',
 		'turn' : 1,
 		"hand_size" : 5,
-		'dealer' : my_name,
+		'dealer' : get_player_name(GameManager.my_uid),
 		'seed' : randi(),
-		'moves' : [ ]
 	}
 
 @onready var rng = RandomNumberGenerator.new()
@@ -92,10 +81,6 @@ var move_count := 0
 
 func start_game(game_data : Dictionary):
 	add_to_group("HandListener")
-	add_to_group("CardListener")
-	
-	ask_panel.hide()
-	ask_panel.self_modulate = Color("252525ff")
 	
 	rng.seed = int( game_data.get("seed") )
 	
@@ -170,10 +155,10 @@ func display_cards():
 	get_tree().call_group("PassiveCard", "on_passive_update", players[GameManager.my_uid]["passive"])
 
 var request_timestamp := 0.0
-var target_player_id := ''
+static var target_player_id := ''
 
 var elapsed_time := 0.0
-var quick_time_on_going : bool
+static var quick_time_on_going : bool
 
 var can_send_passive = true
 
@@ -375,7 +360,8 @@ func end_game():
 		elif score == winning_score:
 			winners.append(player)
 	
-	for winner in winners: action_message(str( get_player_name(winner), " Won with ", winning_score, " points!"))
+	for winner in winners: 
+		action_message(str( get_player_name(winner), " Won with ", winning_score, " points!"))
 
 func draw_from_deck(target_id : String):
 	action_message( str(get_player_name(target_id), " went fishing.") )
@@ -449,18 +435,7 @@ func get_player_name(id) -> String:
 func get_player_passive(player_id) -> String:
 	return players[player_id]["passive"]
 
-var last_card_source : String = "DRAW"
-
 func on_ask(player_name, card_rank):
-	selected_rank = ""
-	selected_player_name = ""
-	
-	ask_panel.hide()
-	
-	if card_rank == "":
-		print("No rank selected")
-		return
-	
 	print("Hey ", player_name, ", Do you have any ", CARDS[card_rank].name, "?")
 	
 	var player_id : String = get_player_id(player_name)
@@ -480,92 +455,29 @@ func on_ask(player_name, card_rank):
 	make_move({ "player" : GameManager.my_uid, "target": player_id, "type" : MOVES.TAKE, "rank": card_rank })
 	on_await(true)
 
-
-func on_power(player_name, power):
-	var target_id : String = get_player_id(player_name)
-	
-	if quick_time_on_going and target_id == target_player_id:
-		print("I can't use powers on ", player_name, " right now")
-		return
-	
-	selected_player_name = ""
-	selected_power_up = ""
-	
-	ask_panel.hide()
-	make_move({ "player" : GameManager.my_uid, "target" : target_id, "type" : MOVES.USE, "power" : power })
-
-var ask_mode : bool = true
-
-func set_power_use_text():
-	ask_mode = false
-	var pool : Dictionary = POWERS.merged(PASSIVES)
-	
-	if selected_power_up and selected_player_name:
-		request_label.text = str("Using ", pool[selected_power_up], " on ", selected_player_name)
-
-func set_up_ask_text():
-	ask_mode = true
-	if selected_rank and selected_player_name:
-		request_label.text = str("Hey, ", selected_player_name, " you got any ", CARDS[selected_rank].name)
-
 func get_player_id(player_name):
 	return GameManager.chat_data.members.find_key(player_name)
 
-func on_player_selected(player_name):
-	selected_power_up = ""
-	selected_rank = ""
-	selected_player_name = player_name
-	
-	request_label.text = str("Hey, ", player_name)
-	
-	var player_id = get_player_id(player_name)
-	if target_player_id == player_id and quick_time_on_going: print("can't select them yet...")
-	
-	print( str("Hey, ", player_name) )
-	ask_panel.show()
-
-func on_power_selected(power):
-	#shouldn't be able to use power when it's your turn.
-	if PASSIVES.has(power) and can_send_passive:
-		make_move({"player" : GameManager.my_uid, "passive" : power, "type" : MOVES.PASSIVE})
-		return
-	
-	if is_my_turn:
-		#can't use power when it's your turn.
-		print("still your turn")
-		return
-	
-	selected_power_up = power
-	
-	request_label.text = str("Using ", power, " on...")
-	ask_panel.self_modulate = Color("db3f39ff")
-	set_power_use_text()
-
-func on_card_selected(rank):
-	selected_rank = rank
-	
-	ask_panel.self_modulate = Color("252525ff")
-	set_up_ask_text()
-
-func on_send_ask_pressed():
-	if not is_my_turn:
-		if not ask_mode:
-			on_power(selected_player_name, selected_power_up)
-			print("I'm using powers on ", selected_player_name)
-			return
-		print("not your turn")
-		return
-	
-	ask_panel.hide()
-	request_label.text = ""
-	
-	#check if my hand still has the card.
+func on_ask_panel_ask(player, rank):
 	var cannot_ask_that = players[GameManager.my_uid]["hand"].filter(
-		func(card): return card.rank == selected_rank
+		func(card): return card.rank == rank
 	).is_empty()
 	
 	if cannot_ask_that:
 		print("hmmmm")
 		return
 	
-	if ask_mode: on_ask(selected_player_name, selected_rank)
+	on_ask(player, rank)
+
+func on_ask_panel_use_passive(passive):
+	if can_send_passive:
+		make_move({"player" : GameManager.my_uid, "passive" : passive, "type" : MOVES.PASSIVE})
+		can_send_passive = false
+
+func on_ask_panel_use_power(player, power):
+	var target_id : String = get_player_id(player)
+	
+	make_move({
+		"player" : GameManager.my_uid, "target" : target_id, 
+		"type" : MOVES.USE, "power" : power 
+	})

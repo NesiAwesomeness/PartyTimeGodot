@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://du8upkqwop5yl"]
+
+[ext_resource type="FontFile" uid="uid://buc244urdaubb" path="res://assets/fonts/FunnelDisplay-SemiBold.ttf" id="1_yfyv6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5xxos"]
+bg_color = Color(0.12599653, 0.12599656, 0.12599653, 1)
+border_width_bottom = 2
+border_color = Color(0.09411765, 0.09411765, 0.09411765, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Button" type="Button" unique_id=50010944]
+custom_minimum_size = Vector2(0, 32)
+theme_override_fonts/font = ExtResource("1_yfyv6")
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_5xxos")
+text = "Balls"

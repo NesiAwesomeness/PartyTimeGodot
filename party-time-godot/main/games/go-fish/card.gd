@@ -54,7 +54,7 @@ var active = false
 
 #this can only be called by cards for "ME"
 func set_up(card : Dictionary):
-	is_power_card = not GoFish.CARDS.has(card.rank)
+	var is_power_card = not GoFish.CARDS.has(card.rank)
 	
 	selection.pressed.connect(on_selection)
 	selection.disabled = false
@@ -127,14 +127,6 @@ func hand_updated(is_me : bool):
 	if not GoFish.CARDS.has(rank): return
 	
 	await tween.finished
-	
-	if count == GoFish.CARDS[rank].tier and is_inside_tree():
-		get_tree().call_group("CardListener", "on_book", rank)
 
 func on_selection():
-	if is_power_card:
-		#if it's a power card.
-		get_tree().call_group("CardListener", "on_power_selected", rank)
-		
-	else:
-		get_tree().call_group("CardListener", "on_card_selected", rank)
+	get_tree().call_group("CardListener", "on_card_selected", rank)
