@@ -199,7 +199,12 @@ func apply_move( move, _set_up:bool=false ):
 			else:
 				if block_list.has(move.rank):
 					#remove rank from block list
-					players[move.target]["block_list"] = block_list.filter(func(rank): return rank != move.rank)
+					players[move.target]["block_list"] = block_list.filter(
+						func(rank): return rank != move.rank
+					)
+					
+					#remove the card from the targets hand.
+					delete_one_card("silver_tongue", move.target)
 					
 					#Player will draw.
 					draw_from_deck( move.player )
@@ -218,6 +223,8 @@ func apply_move( move, _set_up:bool=false ):
 					)
 		MOVES.PASSIVE:
 			delete_one_card(move.passive, move.player)
+			
+			print("on passive use ", move.passive, move.player)
 			match move.passive:
 				"silver_tongue": players[move.player]["block_list"].append(move.rank)
 		MOVES.USE:
@@ -470,6 +477,7 @@ func on_ask_panel_ask(player, rank):
 	on_ask(player, rank)
 
 func on_passive_use(passive, target_rank):
+	print("passive move made")
 	make_move({"player" : GameManager.my_uid, "passive" : passive, "type" : MOVES.PASSIVE, "rank": target_rank})
 
 func on_ask_panel_use_power(player, power):

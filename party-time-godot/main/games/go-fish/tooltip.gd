@@ -3,14 +3,16 @@ class_name GoFishToolTip
 
 # The global static variable your cards will modify
 static var tooltip: String = ""
+@export var speed : float = 50.0
 
 # Internal state tracking
 var _current_tooltip: String = ""
 var active_tween: Tween
 
 # Positioning constants
-var _base_offset: Vector2 = Vector2(40, -32)
+var _base_offset: Vector2 = Vector2(40, -48)
 var _anim_offset_y: float = 0.0 # This is what we will actually tween!
+var _current_base_pos: Vector2 = Vector2.ZERO # Tracks the smoothed position
 
 func _ready() -> void:
 	# Start completely invisible and hidden
@@ -27,11 +29,28 @@ func _process(_delta: float) -> void:
 		else:
 			# Update the text before showing
 			text = _current_tooltip
+			size = Vector2.ZERO
 			_animate_show()
 
 	# 2. If it's visible, lock it to the mouse + offset + the tweened animation value
 	if visible:
 		global_position = get_global_mouse_position() + _base_offset + Vector2(0, _anim_offset_y)
+		# Calculate the maximum allowed X and Y before hitting the right/bottom margins.
+		# We use max() just in case the screen is extremely tiny, preventing clamp errors.
+		var mouse_target = get_global_mouse_position() + _base_offset
+		var screen_size = get_viewport_rect().size
+		var margin: float = 48.0
+		
+		var max_x = max(margin, screen_size.x - size.x - margin)
+		var max_y = max(margin, screen_size.y - size.y - margin)
+		
+		# Restrict the target coordinates to the safe box
+		var clamped_x = clamp(mouse_target.x, margin, max_x)
+		var clamped_y = clamp(mouse_target.y, margin, max_y)
+		var safe_target_pos = Vector2(clamped_x, clamped_y)
+		
+		_current_base_pos = _current_base_pos.lerp(safe_target_pos, speed * _delta)
+		global_position = _current_base_pos + Vector2(0, _anim_offset_y)
 
 
 func _animate_show() -> void:

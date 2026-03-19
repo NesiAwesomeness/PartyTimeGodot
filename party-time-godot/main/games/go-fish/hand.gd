@@ -109,4 +109,4 @@ func shake_card( _rank ):
 
 func arrange_cards():
 	for card_node : Card in hand_container.get_children():
-		card_node.hand_updated(is_me)
+		card_node.hand_updated( is_me )

@@ -99,6 +99,8 @@ func on_card_selected(rank):
 	if GoFish.PASSIVES.has(rank):
 		request_label.text = "[wave] Drag and Drop over any card. [/wave]"
 		self_modulate = Color("647843ff")
+		show()
+		
 		return
 	
 	var power_card = not GoFish.CARDS.has(rank)
@@ -117,8 +119,6 @@ func set_up_panel( is_power : bool ):
 		str("Using [shake]", GoFish.POWERS[selected_rank], "[/shake] on") if 
 		is_power else str("I need [wave]", GoFish.CARDS[selected_rank].name, "[/wave] from")
 	)
-	
-	print( request_label.text )
 
 func on_send_pressed():
 	var target_id : String = get_player_id(selected_player_name)
