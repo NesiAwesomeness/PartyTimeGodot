@@ -39,51 +39,57 @@ var _is_dragging: bool = false
 var _drag_offset: Vector2 = Vector2.ZERO
 var _target_pos: Vector2 = Vector2.ZERO
 var _anim_tween: Tween
+var _exit_tween: Tween
 
 static var card_in_hand = false
 var booked := false
 
 func update_count(_count : int, is_protected:bool=false):
 	protection_label.visible = is_protected
+	show()
 	
 	if _count == 0:
 		if GoFish.booked_cards.has(rank):
 			if booked: return
 			booked = true
 			
+			z_index = 3
+			
 			if _anim_tween and _anim_tween.is_valid():
 				_anim_tween.kill()
 			
-			_anim_tween = create_tween().set_parallel(true)
+			_exit_tween = create_tween().set_parallel(true)
 			
 			#fade the numbers and prot first
-			_anim_tween.tween_property(number, "modulate:a", 0.0, 0.1)
-			_anim_tween.tween_property(protection_label, "modulate:a", 0.0, 0.1)
+			_exit_tween.tween_property(number, "modulate:a", 0.0, 0.1)
+			_exit_tween.tween_property(protection_label, "modulate:a", 0.0, 0.1)
 			
-			_anim_tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.5).set_ease(
+			_exit_tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.5).set_ease(
 				Tween.EASE_OUT).set_trans(Tween.TRANS_CIRC)
-			_anim_tween.tween_property(card_body, "position:y", 32.0, 0.5).set_ease(
+			_exit_tween.tween_property(card_body, "position:y", -32.0, 0.5).set_ease(
 				Tween.EASE_OUT).set_trans(Tween.TRANS_CIRC)
 			
-			_anim_tween.tween_property(card_vis, "modulate:a", 0.0, 0.2).set_delay(0.1)
-			_anim_tween.chain().tween_callback( queue_free )
+			_exit_tween.tween_property(card_body, "modulate:a", 0.0, 0.2).set_delay(0.1)
+			_exit_tween.chain().tween_callback( queue_free )
 		else:
 			if _anim_tween and _anim_tween.is_valid():
 				_anim_tween.kill()
 			
-			_anim_tween = create_tween().set_parallel(true)
+			z_index = 0
+			
+			_exit_tween = create_tween().set_parallel(true)
 			
 			#fade the numbers and prot first
-			_anim_tween.tween_property(number, "modulate:a", 0.0, 0.1)
-			_anim_tween.tween_property(protection_label, "modulate:a", 0.0, 0.1)
+			_exit_tween.tween_property(number, "modulate:a", 0.0, 0.1)
+			_exit_tween.tween_property(protection_label, "modulate:a", 0.0, 0.1)
 			
-			_anim_tween.tween_property(self, "scale", Vector2(0.9, 0.9), 0.15).set_ease(
+			_exit_tween.tween_property(self, "scale", Vector2(0.9, 0.9), 0.15).set_ease(
 				Tween.EASE_OUT).set_trans(Tween.TRANS_CIRC)
-			_anim_tween.tween_property(card_body, "position:y", 32.0, 0.15).set_ease(
+			_exit_tween.tween_property(card_body, "position:y", 32.0, 0.15).set_ease(
 				Tween.EASE_OUT).set_trans(Tween.TRANS_CIRC)
 			
-			_anim_tween.tween_property(card_vis, "modulate:a", 0.0, 0.1).set_delay(0.1)
-			_anim_tween.chain().tween_callback( queue_free )
+			_exit_tween.tween_property(card_body, "modulate:a", 0.0, 0.1).set_delay(0.1)
+			_exit_tween.chain().tween_callback( queue_free )
 		return
 	
 	if _count == count: return
@@ -244,7 +250,7 @@ func _perform_drop() -> void:
 			if sibling != self and sibling.card_body.get_global_rect().has_point(mouse_pos):
 				target_rank = sibling.rank
 	
-	if GoFish.PASSIVES.has(rank):
+	if GoFish.PASSIVES.has(rank) and GoFish.CARDS.has(target_rank):
 		print(rank, " on ", target_rank)
 		if target_rank == '': return
 		

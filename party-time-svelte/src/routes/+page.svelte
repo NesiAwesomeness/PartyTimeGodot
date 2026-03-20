@@ -19,64 +19,124 @@
 
 	onMount(() => (isLoading = false));
 
+	const validateInputs = () => {
+		if (!userName || !password) {
+			toast.error('Please fill in all fields.');
+			return false;
+		}
+		if (/\s/.test(userName)) {
+			toast.error('Username cannot contain spaces.');
+			return false;
+		}
+		if (password.length < 8) {
+			toast.error('Password must be at least 8 characters long.');
+			return false;
+		}
+		return true;
+	};
+
 	function handleLogin(event) {
+		if (!validateInputs()) return;
 		isLoading = true;
 
 		event.preventDefault();
 		signInWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
-			.then()
+			.then(() => {
+				toast.success(`Welcome @${userName.toLowerCase()}!`);
+			})
 			.catch((error) => {
-				const errorCode = error.code;
-				const errorMessage = error.message;
-				if (errorMessage == 'Firebase: Error (auth/invalid-credential).') {
-					toast.error('Wrong Username or password :(');
+				switch (error.code) {
+					case 'auth/invalid-credential':
+						toast.error('Wrong username or password :(');
+						break;
+					case 'auth/user-disabled':
+						toast.error('This account has been disabled.');
+						break;
+					case 'auth/too-many-requests':
+						toast.error('Too many failed attempts. Please try again later.');
+						break;
+					case 'auth/network-request-failed':
+						toast.error('Network error. Please check your connection.');
+						break;
+					default:
+						toast.error('An unexpected error occurred while logging in.');
+						console.error('Login Error:', error); // Good to log unexpected errors for debugging
 				}
 			})
 			.finally(() => {
-				toast.success(`Welcome @${userName.toLowerCase()}!`);
 				isLoading = false;
 			});
 	}
 
 	function handleRegister(event) {
+		if (!validateInputs()) return;
 		isLoading = true;
 
 		event.preventDefault();
 		createUserWithEmailAndPassword(auth, `${userName.toLowerCase()}@partytime.test`, password)
-			.then()
+			.then(() => {
+				toast.success(`Welcome @${userName.toLowerCase()}!`);
+			})
 			.catch((error) => {
-				const errorCode = error.code;
-				const errorMessage = error.message;
-				toast.error(error.message);
+				switch (error.code) {
+					case 'auth/email-already-in-use':
+						// We translate "email" to "username" here since that's how your app is structured
+						toast.error('That username is already taken!');
+						break;
+					case 'auth/weak-password':
+						toast.error('Your password is too weak. Try adding numbers or symbols.');
+						break;
+					case 'auth/network-request-failed':
+						toast.error('Network error. Please check your connection.');
+						break;
+					case 'auth/invalid-email':
+						toast.error('Invalid username format.');
+						break;
+					default:
+						toast.error('An unexpected error occurred during registration.');
+						console.error('Register Error:', error);
+				}
 			})
 			.finally(() => {
-				toast.success(`Welcome @${userName.toLowerCase()}!`);
 				isLoading = false;
 			});
 	}
 </script>
 
-<div class="account-auth">
-	<div class="account-auth-spacer">
-		<h2 class="game-title">PARTY TIME!</h2>
+<div class="grid grid-flow-col grid-cols-2 portrait:grid-cols-1 w-screen h-[100dvh] bg-[#0f0f0f]">
+	<div class="bg-[#212121] m-4 rounded-lg portrait:hidden">
+		<h2
+			class="text-[5em] h-full m-0 w-full text-white flex justify-center items-center text-center leading-none"
+		>
+			PARTY TIME!
+		</h2>
 	</div>
-	<div class="account-auth-form">
+
+	<div class="grid justify-items-center items-center text-white">
 		<div>
-			<div class="auth-title">
+			<div class="my-4 text-xs grid gap-2">
 				{#if isSignin}
-					<h3 class="!text-3xl">Sign In</h3>
+					<h3 class="!text-3xl m-0">Sign In</h3>
 				{:else}
-					<h3 class="!text-3xl">Sign Up</h3>
+					<h3 class="!text-3xl m-0">Sign Up</h3>
 				{/if}
-				<p class="text-base">Play text message games with your friends</p>
+				<p class="text-base m-0 text-white/[0.57]">Play text message games with your friends</p>
 			</div>
-			<form class="auth-form" onsubmit={handleLogin}>
+
+			<form
+				novalidate
+				class="grid grid-flow-row gap-4"
+				onsubmit={isSignin ? handleLogin : handleRegister}
+			>
 				<input
 					type="text"
 					name="username"
 					placeholder="Username"
 					bind:value={userName}
 					autocomplete="username"
+					pattern="^\S+$"
+					title="Username cannot contain spaces"
+					class="box-border w-full bg-[#2a2a2a] text-white rounded-full py-3 px-6 text-base font-inherit focus:outline-none"
 					required
 				/>
 				<div class="relative">
@@ -86,6 +146,9 @@
 						placeholder="Password"
 						bind:value={password}
 						autocomplete="current-password"
+						minlength="8"
+						title="Password must be at least 8 characters long"
+						class="box-border w-full bg-[#2a2a2a] text-white rounded-full py-3 px-6 text-base font-inherit focus:outline-none"
 						required
 					/>
 					{#if passwordSeen}
@@ -93,20 +156,25 @@
 							onClick={() => {
 								passwordSeen = false;
 							}}
-							class="absolute center-y right-4 size-[17px] cursor-pointer"
+							class="absolute top-1/2 -translate-y-1/2 right-4 w-[17px] h-[17px] cursor-pointer"
 						/>
 					{:else}
 						<EyeClosed
 							onClick={() => {
 								passwordSeen = true;
 							}}
-							class="absolute center-y right-4 size-[17px] cursor-pointer"
+							class="absolute top-1/2 -translate-y-1/2 right-4 w-[17px] h-[17px] cursor-pointer"
 						/>
 					{/if}
 				</div>
-				<div class="button-group">
+
+				<div class="grid grid-flow-col portrait:grid-flow-row gap-4">
 					{#if isSignin}
-						<button type="submit" onclick={handleLogin} disabled={isLoading}>
+						<button
+							type="submit"
+							disabled={isLoading}
+							class="cursor-pointer box-border w-full bg-[#2a2a2a] text-white rounded-full text-center py-3 px-6 text-base font-inherit font-semibold focus:outline-none disabled:opacity-50"
+						>
 							{#if isLoading}
 								<div class="flex justify-center items-center">
 									<Loader size={20} />
@@ -116,7 +184,11 @@
 							{/if}
 						</button>
 					{:else}
-						<button type="button" onclick={handleRegister} disabled={isLoading}>
+						<button
+							type="submit"
+							disabled={isLoading}
+							class="cursor-pointer box-border w-full bg-[#2a2a2a] text-white rounded-full text-center py-3 px-6 text-base font-inherit font-semibold focus:outline-none disabled:opacity-50"
+						>
 							{#if isLoading}
 								<div class="flex justify-center items-center">
 									<Loader size={20} />
@@ -133,17 +205,19 @@
 						New here? <button
 							onclick={(e) => {
 								e.preventDefault();
-								isSignin = !isSignin;
+								isSignin = false;
 							}}
-							class="underline cursor-pointer inline">Create an account</button
+							class="underline cursor-pointer inline bg-transparent border-none p-0 text-inherit font-inherit"
+							>Create an account</button
 						>
 					{:else}
 						Have an account? <button
 							onclick={(e) => {
 								e.preventDefault();
-								isSignin = !isSignin;
+								isSignin = true;
 							}}
-							class="underline cursor-pointer inline">Sign in</button
+							class="underline cursor-pointer inline bg-transparent border-none p-0 text-inherit font-inherit"
+							>Sign in</button
 						>
 					{/if}
 				</p>
@@ -151,123 +225,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	.account-auth {
-		display: grid;
-		grid-auto-flow: column;
-		grid-template-columns: 1fr 1fr;
-
-		width: 100vw;
-		height: 100vh;
-		background-color: rgb(15, 15, 15);
-	}
-
-	.account-auth-spacer {
-		background-color: rgb(33, 33, 33);
-		margin: 16px;
-		border-radius: 8px;
-	}
-
-	.account-auth-form {
-		display: grid;
-		justify-items: center;
-		align-items: center;
-
-		color: white;
-	}
-
-	.auth-title {
-		margin: 16px 0;
-		font-size: 0.75rem;
-		display: grid;
-		gap: 8px;
-	}
-
-	.auth-title p {
-		margin: 0;
-		color: rgba(255, 255, 255, 0.571);
-	}
-
-	.auth-title h3 {
-		margin: 0;
-		font-size: 1.5rem;
-	}
-
-	.auth-form {
-		display: grid;
-		grid-auto-flow: row;
-		gap: 16px;
-	}
-
-	.auth-form input {
-		all: unset;
-
-		box-sizing: border-box;
-		width: 100%;
-
-		background-color: #2a2a2a;
-		color: white;
-
-		border-radius: 9999px;
-
-		padding: 12px 24px;
-		font-size: 1rem;
-
-		font-family: inherit;
-	}
-
-	.button-group {
-		display: grid;
-		grid-auto-flow: column;
-		gap: 16px;
-	}
-
-	.button-group button {
-		all: unset;
-		cursor: pointer;
-
-		box-sizing: border-box;
-		width: 100%;
-
-		background-color: #2a2a2a;
-		color: white;
-
-		border-radius: 9999px;
-		text-align: center;
-
-		padding: 12px 24px;
-		font-size: 1rem;
-		font-family: inherit;
-		font-weight: 600;
-	}
-
-	@media (orientation: portrait) {
-		.account-auth {
-			grid-template-columns: 1fr; /* Forces it into a single column */
-		}
-
-		.account-auth-spacer {
-			display: none;
-		}
-
-		.button-group {
-			grid-auto-flow: row;
-		}
-	}
-
-	.game-title {
-		font-size: 5em;
-		height: 100%;
-		margin: 0;
-
-		width: 100%;
-		color: white;
-		/* margin-inline: auto; */
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		text-align: center;
-		line-height: 100%;
-	}
-</style>

@@ -109,7 +109,6 @@ func start_game(game_data : Dictionary):
 		
 		players[member]["hand"] = hand
 		players[member]["score"] = 0
-		players[member]["passive"] = ""
 		
 		#this is a list of cards that will be blocked if asked for.
 		players[member]["block_list"] = []
@@ -186,11 +185,7 @@ func apply_move( move, _set_up:bool=false ):
 		MOVES.TAKE:
 			var ranks : Array = players[move.target]["hand"].filter( func(card): return card.rank == move.rank )
 			
-			#get the passive of the target
-			var target_passive : String = get_player_passive(move.target)
-			
 			var block_list : Array = players[move.target]["block_list"]
-			print(get_player_name(move.target), "'s passive is ", target_passive)
 			
 			#GoFish
 			if ranks.is_empty():
@@ -366,14 +361,20 @@ func end_game():
 			winners.append(player)
 	
 	for winner in winners: 
-		action_message(str( get_player_name(winner), " Won with ", winning_score, " points!"))
+		action_message(str( 
+			get_player_name(winner), " Won with ", winning_score, " points!"))
 
-func draw_from_deck(target_id : String):
+func draw_from_deck(target_id : String, _score: float=0.2):
 	action_message( str(get_player_name(target_id), " went fishing.") )
 	var new_card = deck.pop_back()
+	
+	#var cards_to_add = []
+	#var power_card_chance = 0.0
+	
 	players[target_id]['hand'].append( new_card )
 	
-	if target_id == GameManager.my_uid: action_message( str("I got ", CARDS[new_card.rank].name) )
+	if target_id == GameManager.my_uid:
+		action_message( str("I got ", CARDS[new_card.rank].name) )
 	
 	#roll a dice to get a power up
 	if rng.randi() % 3 == 0:
@@ -388,6 +389,28 @@ func draw_from_deck(target_id : String):
 				action_message( str( get_player_name(target_id), " found something special!") )
 	
 	action_message( str( deck.size(), " cards left in the deck") )
+
+func _draw_needed_card(target_id: String):
+	if deck.size() == 0:
+		return null
+		
+	var player_hand = players[target_id]['hand']
+	var needed_ranks = []
+	
+	# Collect the ranks the player currently has in their hand
+	for card in player_hand:
+		if card.has("rank") and not needed_ranks.has(card.rank):
+			needed_ranks.append(card.rank)
+			
+	# Search the deck from top to bottom for a matching rank
+	for i in range(deck.size() - 1, -1, -1):
+		if needed_ranks.has(deck[i].rank):
+			var found_card = deck[i]
+			deck.remove_at(i) # Pull it out of the middle of the deck (use .remove(i) if in Godot 3.x)
+			return found_card
+			
+	# If no matching card was found in the deck, just give them a random card
+	return deck.pop_back()
 
 func get_next_turn( _turn ) -> int:
 	return wrapi( _turn + 1, 0, int(GameManager.chat_data.memberCount) )
@@ -439,9 +462,6 @@ func shuffle_deck():
 func get_player_name(id) -> String:
 	return GameManager.chat_data.members[id]
 
-func get_player_passive(player_id) -> String:
-	return players[player_id]["passive"]
-
 func on_ask(player_name, card_rank):
 	print("Hey ", player_name, ", Do you have any ", CARDS[card_rank].name, "?")
 	
@@ -477,8 +497,8 @@ func on_ask_panel_ask(player, rank):
 	on_ask(player, rank)
 
 func on_passive_use(passive, target_rank):
-	print("passive move made")
-	make_move({"player" : GameManager.my_uid, "passive" : passive, "type" : MOVES.PASSIVE, "rank": target_rank})
+	make_move({"player" : GameManager.my_uid, "passive" : passive, 
+	"type" : MOVES.PASSIVE, "rank": target_rank})
 
 func on_ask_panel_use_power(player, power):
 	var target_id : String = get_player_id(player)

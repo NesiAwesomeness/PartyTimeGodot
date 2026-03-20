@@ -140,7 +140,7 @@ layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("4_5ubho")
 theme_override_font_sizes/normal_font_size = 32
 bbcode_enabled = true
-text = "I need some BBC from"
+text = "I need some [wave]BBC[/wave] from"
 fit_content = true
 autowrap_mode = 0
 vertical_alignment = 1
@@ -265,6 +265,7 @@ layout_mode = 3
 anchors_preset = 0
 
 [node name="Tooltip" type="Label" parent="Control" unique_id=330066413]
+visible = false
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0

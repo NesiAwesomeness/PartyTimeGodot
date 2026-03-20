@@ -38,8 +38,6 @@ func update_hand(new_hand : Array, block_list:Array=[]):
 			var card_node : Card = hand_container.get_node_or_null(card.rank)
 			if card_node:
 				card_node.animate = true
-				print("Ummm...", card.rank, block_list.has(card.rank), block_list)
-				
 				card_node.update_count( 
 					new_hand.filter(func(c): return c.rank == card.rank).size(), block_list.has(card.rank)
 				)

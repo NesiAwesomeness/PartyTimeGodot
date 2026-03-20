@@ -166,9 +166,8 @@
 
 		if (gameMovesUnsub) gameMovesUnsub();
 		if (playerStateUnsub) playerStateUnsub();
-		leaveMeshSession();
 
-		// 4. Finally, clear my ID
+		leaveMeshSession();
 		meshState.myGodotId = null;
 	}
 

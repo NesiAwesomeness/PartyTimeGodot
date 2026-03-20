@@ -23,7 +23,7 @@ class appState {
 	init() {
 		onAuthStateChanged(auth, async (user) => {
 			if (user) {
-				this.uid = user.uid
+				// 1. Fetch or create the document first
 				const userDocRef = doc(db, 'users', user.uid);
 				const userSnapshot = await getDoc(userDocRef);
 
@@ -44,20 +44,22 @@ class appState {
 					await setDoc(userDocRef, userInfo);
 				}
 
-				this.lastCheckedRequests = userInfo.lastCheckedRequests
-				this.loading = false
+				this.lastCheckedRequests = userInfo.lastCheckedRequests;
+				this.loading = false;
 
-				this.fetchPlaygroundData()
+				this.fetchPlaygroundData();
+				this.uid = user.uid;
 
 			} else {
-				this.uid = ''
-				this.username = ''
+				this.uid = '';
+				this.username = '';
 
 				this.playgrounds = [];
 				this.requests = [];
 
 				this.stopListening();
 			}
+
 			this.isInitialized = true;
 		});
 	}
