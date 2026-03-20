@@ -61,7 +61,7 @@ var deck : Array = []
 static var booked_cards = []
 
 enum MOVES {
-	ASK=1, TAKE=2, PASSIVE=3, USE=4, END=5
+	ASK=1, TAKE=2, PASSIVE=3, USE=4, END=5, GOFISH=0
 }
 
 func initialize_game() -> Dictionary:
@@ -183,7 +183,8 @@ func apply_move( move, _set_up:bool=false ):
 				Color(0.235, 0.286, 0.428, 0.773)
 			)
 		MOVES.TAKE:
-			var ranks : Array = players[move.target]["hand"].filter( func(card): return card.rank == move.rank )
+			var ranks : Array = players[move.target]["hand"
+			].filter( func(card): return card.rank == move.rank )
 			
 			var block_list : Array = players[move.target]["block_list"]
 			
@@ -205,6 +206,8 @@ func apply_move( move, _set_up:bool=false ):
 					draw_from_deck( move.player )
 					action_message(str(get_player_name(move.target), " used block!"))
 					
+					#TODO if the last turn was my turn update turn to the cloud
+					
 					#Move the turn
 					update_turn( get_next_turn(turn) )
 				else: #no block
@@ -216,6 +219,8 @@ func apply_move( move, _set_up:bool=false ):
 						str(get_player_name(move.player), " took ", 
 						CARDS[move.rank].name, " from ", get_player_name(move.target))
 					)
+		MOVES.GOFISH:
+			pass
 		MOVES.PASSIVE:
 			delete_one_card(move.passive, move.player)
 			

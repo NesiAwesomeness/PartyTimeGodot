@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfhqw88rvifvf"
-path="res://.godot/imported/check-circle.svg-47bb9c0f2015dbee0315ffc7a3838c1e.ctex"
+uid="uid://c0dlx4flal471"
+path="res://.godot/imported/fishing.svg-eff2748520feecee37b4287947e936e4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/check-circle.svg"
-dest_files=["res://.godot/imported/check-circle.svg-47bb9c0f2015dbee0315ffc7a3838c1e.ctex"]
+source_file="res://assets/icons/fishing.svg"
+dest_files=["res://.godot/imported/fishing.svg-eff2748520feecee37b4287947e936e4.ctex"]
 
 [params]
 

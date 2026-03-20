@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://cgxm825fe1oid"]
+
+[ext_resource type="Texture2D" uid="uid://c0dlx4flal471" path="res://assets/icons/fishing.svg" id="1_pyhka"]
+[ext_resource type="Script" uid="uid://1uiiheymmtlh" path="res://main/games/go-fish/mini-games/fishing-controls.gd" id="1_u5ssu"]
+
+[node name="Control" type="CenterContainer" unique_id=166735553]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control" type="Control" parent="." unique_id=386503536 node_paths=PackedStringArray("outline", "fill", "target", "hook")]
+layout_mode = 2
+script = ExtResource("1_u5ssu")
+outline = NodePath("Outline")
+fill = NodePath("Outline/Fill")
+target = NodePath("Outline/Fill/Target")
+hook = NodePath("Sprite2D")
+
+[node name="Outline" type="Line2D" parent="Control" unique_id=2024420262]
+points = PackedVector2Array(0, 0, 240, 0)
+width = 52.0
+
+[node name="Fill" type="Line2D" parent="Control/Outline" unique_id=428528698]
+points = PackedVector2Array(0, 0, 240, 0)
+width = 40.0
+default_color = Color(0.40934864, 0.5223338, 0.59768987, 1)
+
+[node name="Target" type="Line2D" parent="Control/Outline/Fill" unique_id=1193862575]
+points = PackedVector2Array(0, 0, 40, 0)
+width = 40.0
+default_color = Color(0.27949914, 0.6785978, 0.55094516, 1)
+
+[node name="Sprite2D" type="Sprite2D" parent="Control" unique_id=592722725]
+scale = Vector2(0.085, 0.085)
+texture = ExtResource("1_pyhka")
