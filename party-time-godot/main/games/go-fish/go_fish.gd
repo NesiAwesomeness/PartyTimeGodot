@@ -59,7 +59,7 @@ var deck : Array = []
 static var booked_cards = []
 
 enum MOVES {
-	ASK=1, TAKE=2, PASSIVE=3, USE=4, END=5, GOFISH=0
+	ASK, TAKE, PASSIVE, USE, END, GOFISH
 }
 
 func initialize_game() -> Dictionary:
@@ -77,13 +77,13 @@ func initialize_game() -> Dictionary:
 var move_index := 0
 var move_count := 0
 
-func start_game(game_data : Dictionary):
+func start_game( game_data ):
 	add_to_group("HandListener")
 	
-	rng.seed = int( game_data.get("seed") )
+	rng.seed = int( game_data.seed )
+	print( "the seed is ", int( game_data.seed ) )
 	
-	print( int( game_data.get("seed") ) )
-	var hand_size = game_data.get("hand_size")
+	var hand_size = game_data.hand_size
 	
 	for card_id in CARDS.keys():
 		var card_data = CARDS[card_id]
@@ -118,22 +118,22 @@ func start_game(game_data : Dictionary):
 			hand_node.hand_name = GameManager.chat_data.members[member]
 			player_nodes.add_child(hand_node)
 	
-	print( game_data.get("dealer") , " just dealt the cards")
-	update_turn( int( game_data.get("turn") ) )
+	print( game_data.dealer , " just dealt the cards")
+	update_turn( int( game_data.turn ) )
 	
-	var moves = game_data.get("moves") if game_data.has("moves") else []
-	move_count = moves.size()
+	move_count = game_data.moves
 	
 	check_game()
 	#only do this at the start of the game
 	if move_count == 0:
 		display_cards()
 
-func on_new_move( move : Dictionary ):
+func on_new_move( move : String ):
 	move_index += 1
 	var is_setting_up = move_index < move_count
 	
-	apply_move( move, is_setting_up )
+	print( move )
+	apply_move( move , is_setting_up )
 	
 	if not is_setting_up: display_cards()
 
@@ -150,87 +150,93 @@ func display_cards():
 		else:
 			hand_node.update_hand( hand )
 		hand_node.update_score( score )
+
+func apply_move( move : String, _set_up:bool=false ):
+	var details = move.split(" ")
 	
-
-static var target_player_id := ''
-
-func apply_move( move, _set_up:bool=false ):
-	var move_type : MOVES = int(move.type) as MOVES
+	var move_type = int( details[0] )
+	var player = details[1]
+	
+	print(move_type, " ", MOVES.keys()[int(move_type)])
+	
 	match move_type:
 		MOVES.ASK:
+			var rank = details[2]
+			var target = details[3]
+			
 			if not _set_up:
-				target_player_id = move.target
-				
 				#we are being asked.
-				if move.target == GameManager.my_uid:
-					my_hand_node.shake_card( move.rank )
+				if target == GameManager.my_uid:
+					my_hand_node.shake_card( rank )
 			
 			action_message(
-				str(get_player_name(move.player), " asked ", 
-				get_player_name(move.target), " for some ", CARDS[move.rank].name),
+				str(get_player_name(player), " asked ", 
+				get_player_name(target), " for some ", CARDS[rank].name),
 				Color(0.235, 0.286, 0.428, 0.773)
 			)
 			
-			var ranks : Array = players[move.target]["hand"
-			].filter( func(card): return card.rank == move.rank )
+			var ranks : Array = players[target]["hand"
+			].filter( func(card): return card.rank == rank )
 			
-			var block_list : Array = players[move.target]["block_list"]
+			var block_list : Array = players[target]["block_list"]
 			
-			#GoFish
+			#Go Fish if the player is me then I should go fish.
 			if ranks.is_empty():
-				#if the player is me then I should go fish.
-				if move.player == GameManager.my_uid:
-					go_fish()
-				draw_from_deck( move.player )
+				if player == GameManager.my_uid: go_fish()
+				
+				draw_from_deck( player )
 				update_turn( get_next_turn( turn ) )
 			else:
-				if block_list.has(move.rank):
-					#remove rank from block list
-					players[move.target]["block_list"] = block_list.filter(
-						func(rank): return rank != move.rank
-					)
+				if block_list.has(rank):
 					
-					#remove the card from the targets hand.
-					delete_one_card("silver_tongue", move.target)
+					#remove rank from block list
+					players[target]["block_list"] = block_list.filter(
+						func(_rank): return _rank != rank
+					)
 					
 					#Player will draw.
 					#if the player is me then I should go fish.
-					if move.player == GameManager.my_uid:
+					if player == GameManager.my_uid:
 						go_fish()
-					draw_from_deck( move.player )
-					action_message(str(get_player_name(move.target), " used block!"))
 					
-					#TODO if the last turn was my turn update turn to the cloud
+					draw_from_deck( player )
+					action_message( str(get_player_name(target) , " used block!"))
 					
 					#Move the turn
 					update_turn( get_next_turn(turn) )
 				else: #no block
-					players[move.player]["hand"].append_array(ranks)
-					players[move.target]["hand"] = players[move.target]["hand"].filter( 
-						func(card): return card.rank != move.rank )
+					players[player]["hand"].append_array(ranks)
+					players[target]["hand"] = players[target]["hand"].filter( 
+						func(card): return card.rank != rank )
 					
 					action_message(
-						str(get_player_name(move.player), " took ", 
-						CARDS[move.rank].name, " from ", get_player_name(move.target))
+						str(get_player_name(player), " took ", 
+						CARDS[rank].name, " from ", get_player_name(target))
 					)
 		MOVES.GOFISH:
-			var fishing_score : float = move.score
-			draw_from_deck( move.player, fishing_score )
+			var score = float(details[2])
+			draw_from_deck( player , score )
 		MOVES.PASSIVE:
-			print(" on passive use ", move.passive, move.player)
+			var passive = details[2]
+			var rank = details[3]
 			
-			match move.passive:
-				"silver_tongue": players[move.player]["block_list"].append(move.rank)
-			delete_one_card(move.passive, move.player)
+			print(" on passive use ", passive, player )
+			
+			delete_one_card(passive, player )
+			match passive:
+				"silver_tongue": players[player ]["block_list"].append(rank)
 		MOVES.USE:
-			delete_one_card(move.power, move.player)
+			var power = details[2]
+			var target = details[3]
+			
+			delete_one_card(power, player )
 			var pool = PASSIVES.merged(POWERS)
 			
-			match move.power:
+			match power:
 				"magnifying_glass":
 					if not _set_up:
-						var target_hand : Array = players[move.target].hand
-						var player_hand : Array = players[move.player].hand
+						var target_hand : Array = players[target].hand
+						var player_hand : Array = players[player].hand
 						
 						var union : Array = player_hand.map(func(card): return card.rank).filter(
 							func(rank): return (target_hand.filter(
@@ -240,7 +246,7 @@ func apply_move( move, _set_up:bool=false ):
 							).map( func(card): return card.rank)).has(rank) )
 						
 						#only display it to me.
-						if move.player == GameManager.my_uid:
+						if player  == GameManager.my_uid:
 							var display_rank : String
 							
 							if not union.is_empty():
@@ -249,8 +255,9 @@ func apply_move( move, _set_up:bool=false ):
 							else:
 								action_message("We have nothing in common")
 				"fast_hands":
-					var target_hand : Array = players[move.target].hand
-					var player_hand : Array = players[move.player].hand
+					
+					var target_hand : Array = players[target].hand
+					var player_hand : Array = players[player ].hand
 					
 					var t = target_hand.filter(func(card): return not pool.has(card.rank))
 					var p = player_hand.filter(func(card): return not pool.has(card.rank))
@@ -272,12 +279,12 @@ func apply_move( move, _set_up:bool=false ):
 					new_player_hand.append_array(cards_from_target)
 					
 					# 5. Update the state
-					players[move.target].hand = new_target_hand
-					players[move.player].hand = new_player_hand
+					players[target].hand = new_target_hand
+					players[player ].hand = new_player_hand
 					
 					if not _set_up:
-						print(get_player_name(move.player)," just took ", CARDS[target_rank].name, " from ", 
-						get_player_name(move.target), " and gave them ", CARDS[player_rank].name)
+						print(get_player_name(player )," just took ", CARDS[target_rank].name, " from ", 
+						get_player_name(target), " and gave them ", CARDS[player_rank].name)
 		MOVES.END:
 			turn = -1
 			is_my_turn = false
@@ -288,7 +295,7 @@ func go_fish():
 	print(" I went finishing ")
 
 func on_fish(score : float):
-	make_move({ "type" : MOVES.GOFISH, "player" : GameManager.my_uid, "score" : score })
+	make_move(str(MOVES.GOFISH," ",GameManager.my_uid," ", score ))
 
 #this can also be used to remove one card from someone's inventory
 func delete_one_card(rank, id):
@@ -349,7 +356,7 @@ func check_game():
 		end_game()
 
 func end_game():
-	turn = 0
+	turn = -1
 	is_my_turn = false
 	
 	var winning_score = -1
@@ -391,8 +398,7 @@ func draw_from_deck(target_id : String, _score: float=0.2):
 			players[target_id]['hand'].append( power_card )
 			
 			if target_id != GameManager.my_uid:
-				action_message( 
-					str( get_player_name(target_id), " found something special!") )
+				action_message( str( get_player_name(target_id), " found something special!") )
 	
 	action_message( str( deck.size(), " cards left in the deck") )
 
@@ -417,6 +423,9 @@ func _draw_needed_card(target_id: String):
 	return deck.pop_back()
 
 func get_next_turn( _turn ) -> int:
+	if is_my_turn:
+		#update the turn value here
+		pass
 	return wrapi( _turn + 1, 0, int(GameManager.chat_data.memberCount) )
 
 func update_turn(_turn : int):
@@ -432,18 +441,6 @@ func update_turn(_turn : int):
 
 func _process(_delta):
 	pass
-	
-	#TODO use browsers system time from now on.
-	#elapsed_time = abs(request_timestamp - Time.get_unix_time_from_system())
-	#if quick_time_on_going != (elapsed_time < REQUEST_TIME):
-		#if quick_time_on_going: quick_time_concluded.emit()
-		#quick_time_on_going = elapsed_time < REQUEST_TIME
-	#
-	#var hand_node : CardHand = player_nodes.get_node_or_null(target_player_id)
-	#if not hand_node:
-		#hand_node = my_hand_node
-	#hand_node.quick_time.visible = quick_time_on_going
-	#hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
 
 func action_message(message : String, color:Color=Color('303030ff')):
 	if move_index < move_count - 2: return
@@ -466,18 +463,17 @@ func shuffle_deck():
 		deck[j] = temp
 
 func get_player_name(id) -> String:
+	if id == GameManager.my_uid: return "You"
 	return GameManager.chat_data.members[id]
 
 func on_ask(player_name, card_rank):
 	print("Hey ", player_name, ", Do you have any ", CARDS[card_rank].name, "?")
 	
 	var player_id : String = get_player_id(player_name)
+	make_move(str(MOVES.ASK, " ", GameManager.my_uid, " ", card_rank, " ", player_id))
 	
 	#TODO if the last move was us and was of type "ASK" and we
 	#have exceded the time of asking then the just execute
-	make_move({
-		"player" : GameManager.my_uid, "type" : MOVES.ASK, 
-		"rank": card_rank, "target": player_id })
 
 func get_player_id(player_name):
 	return GameManager.chat_data.members.find_key(player_name)
@@ -494,13 +490,9 @@ func on_ask_panel_ask(player, rank):
 	on_ask(player, rank)
 
 func on_passive_use(passive, target_rank):
-	make_move({"player" : GameManager.my_uid, "passive" : passive, 
-	"type" : MOVES.PASSIVE, "rank": target_rank})
+	make_move(str(MOVES.PASSIVE, " ", GameManager.my_uid, " ",passive , " ", target_rank))
 
 func on_ask_panel_use_power(player, power):
 	var target_id : String = get_player_id(player)
 	
-	make_move({
-		"player" : GameManager.my_uid, "target" : target_id, 
-		"type" : MOVES.USE, "power" : power 
-	})
+	make_move(str(MOVES.USE, " ",GameManager.my_uid, " ", power, " ", target_id ))

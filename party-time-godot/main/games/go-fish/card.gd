@@ -251,7 +251,6 @@ func _perform_drop() -> void:
 				target_rank = sibling.rank
 	
 	if GoFish.PASSIVES.has(rank) and GoFish.CARDS.has(target_rank):
-		print(rank, " on ", target_rank)
 		if target_rank == '': return
 		
 		get_tree().call_group("HandListener", "on_passive_use", rank, target_rank)
@@ -289,7 +288,7 @@ func hand_updated(_is_me : bool=false, _full_space:bool=false):
 	# Animate the card to its new position and rotation smoothly
 	
 	var tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(self, "position",  Vector2(target_x, target_y + (32.0 * float(_is_me))), duration)
+	tween.tween_property(self, "position",  Vector2(target_x, target_y + (4.0 * float(_is_me))), duration)
 	tween.tween_property(self, "rotation_degrees", target_rotation, duration).set_delay(0.25)
 	tween.chain().tween_callback( func(): z_index = 0 )
 

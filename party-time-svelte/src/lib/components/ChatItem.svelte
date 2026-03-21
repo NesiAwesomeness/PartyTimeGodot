@@ -55,12 +55,10 @@
 					lastGameTitle = latestGame.name;
 					newTimestamp = latestGame.timestamp;
 
-					lastGameisTurnBased =
-						Object.keys(latestGame).includes('gameState') &&
-						Object.keys(latestGame.gameState).includes('playerTurn');
+					lastGameisTurnBased = Object.keys(latestGame).includes('turn');
 
 					if (lastGameisTurnBased) {
-						forYou = latestGame.gameState.playerTurn === playerIndex;
+						forYou = latestGame.turn === playerIndex;
 					}
 
 					if (newTimestamp > (chatItem.timestamp || 0)) {

@@ -20,6 +20,7 @@
 	let playerStateUnsub;
 
 	let isGameOpen = $derived(app.currentGame.id !== '');
+	let isActive = false;
 	let open = false;
 
 	onMount(() => {
@@ -31,16 +32,58 @@
 	}
 
 	$effect(() => {
-		if (open != isGameOpen) {
+		if (open != isGameOpen && iframeRef && iframeRef.contentWindow) {
 			open = isGameOpen;
+
+			const cw = iframeRef.contentWindow;
+
 			if (isGameOpen) {
 				console.log(app.currentGame.id);
 
+				const gameServe = {
+					...app.currentGame.gameData,
+					moves: Object.keys(app.currentGame.gameData).includes('moves')
+						? Object.keys(app.currentGame.gameData.moves).length
+						: 0
+				};
+
+				if (cw.startGame) {
+					cw.startGame(gameServe);
+				}
+
 				joinSession();
-				gameStart();
+
+				const gameMovesRef = ref(
+					rtdb,
+					`chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`
+				);
+
+				gameMovesUnsub = onChildAdded(gameMovesRef, (snapshot) => {
+					const newMove = snapshot.val();
+					if (newMove) {
+						cw.newMove(newMove);
+					}
+				});
+
+				const playerStateRef = ref(
+					rtdb,
+					`chats/${app.currentChat.id}/games/${app.currentGame.id}/playerState/`
+				);
+
+				playerStateUnsub = onValue(playerStateRef, (snapshot) => {
+					const playerState = snapshot.val();
+					if (playerState) {
+						pushGodot('update_players', playerState);
+					}
+				});
 			}
 		}
 	});
+
+	function closeGame() {
+		const cw = iframeRef.contentWindow;
+		cw.closeGame();
+	}
 
 	function handleIframeLoad() {
 		if (!iframeRef || !iframeRef.contentWindow) return;
@@ -54,11 +97,16 @@
 
 		cw.makeMove = async (move) => {
 			const gameRef = ref(rtdb, `chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`);
-			await push(gameRef, JSON.parse(move));
+			await push(gameRef, move);
 		};
 
 		cw.GodotSendToPlayer = (targetPeerId, data) => {
 			sendTo(targetPeerId, data);
+		};
+
+		cw.gameClose = () => {
+			app.resetGame();
+			leaveSession();
 		};
 
 		cw.getTime = () => {
@@ -70,35 +118,6 @@
 		};
 
 		console.log('Godot JS Bridge Outbound Functions Injected!');
-	}
-
-	// FIREBASE TO GODOT
-	function gameStart() {
-		pushGodot('start_game', app.currentGame.gameData);
-
-		const gameMovesRef = ref(
-			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`
-		);
-
-		gameMovesUnsub = onChildAdded(gameMovesRef, (snapshot) => {
-			const newMove = snapshot.val();
-			if (newMove) {
-				pushGodot('new_move', newMove);
-			}
-		});
-
-		const playerStateRef = ref(
-			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/playerState/`
-		);
-
-		playerStateUnsub = onValue(playerStateRef, (snapshot) => {
-			const playerState = snapshot.val();
-			if (playerState) {
-				pushGodot('update_players', playerState);
-			}
-		});
 	}
 
 	$effect(() => {
@@ -147,10 +166,6 @@
 			case 'send_game':
 				sendGame(payload);
 				break;
-			case 'end_game':
-				console.log('closed from Godot');
-				leaveSession();
-				break;
 		}
 	}
 
@@ -161,6 +176,7 @@
 			rtdb,
 			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${meshState.myGodotId}`
 		);
+
 		remove(sessionRef);
 		onDisconnect(sessionRef).cancel();
 
@@ -215,13 +231,6 @@
 		} catch (error) {
 			console.error('Failed to update game:', error);
 		}
-	}
-
-	function closeGame() {
-		// this is temp...
-		leaveSession();
-		pushGodot('on_game_close', {});
-		app.resetGame();
 	}
 
 	onDestroy(() => {

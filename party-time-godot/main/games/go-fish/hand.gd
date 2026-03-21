@@ -28,6 +28,8 @@ func update_hand(new_hand : Array, block_list:Array=[]):
 	score_tag.show()
 	
 	if is_me:
+		hand_container.custom_minimum_size.y = 180
+		
 		var cards_to_remove : Array = hand.filter(func(card): return not new_hand.has(card))
 		hand = new_hand
 		

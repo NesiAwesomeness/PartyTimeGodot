@@ -19,7 +19,7 @@ export async function joinSession() {
 	const response = await fetch('/api/turn');
 	meshState.iceServers = await response.json();
 
-	console.log('Joining Session...');
+	// console.log('Joining Session...');
 
 	const playersRef = ref(
 		rtdb,
@@ -61,7 +61,7 @@ function finalizeJoin(existingPlayersData) {
 
 	if (mySlot) {
 		meshState.myGodotId = parseInt(mySlot);
-		console.log(`Acquired Player ID: ${meshState.myGodotId}`);
+		// console.log(`Acquired Player ID: ${meshState.myGodotId}`);
 
 		// If I close the tab, free up my chair in Firebase
 		const sessionRef = ref(
@@ -77,7 +77,7 @@ function finalizeJoin(existingPlayersData) {
 		});
 
 		meshState.peer.on('open', (id) => {
-			console.log('My PeerJS ID is: ' + id);
+			// console.log('My PeerJS ID is: ' + id);
 			setupMesh(existingPlayersData);
 		});
 
@@ -123,7 +123,7 @@ function setupDataChannelEvents(godotId, channel) {
 	if (!godotId || isNaN(godotId)) return;
 
 	meshState.connections[godotId] = channel;
-	console.log(`✅ WebRTC Mesh Connected to Player ${godotId}!`);
+	// console.log(`✅ WebRTC Mesh Connected to Player ${godotId}!`);
 
 	const godotIframe = document.getElementById("godot-iframe");
 	if (godotIframe && godotIframe.contentWindow.GodotReceiveData) {
@@ -137,7 +137,7 @@ function setupDataChannelEvents(godotId, channel) {
 	});
 
 	channel.on('close', () => {
-		console.log(`❌ Player ${godotId} disconnected.`);
+		// console.log(`❌ Player ${godotId} disconnected.`);
 		delete meshState.connections[godotId];
 
 		if (godotIframe && godotIframe.contentWindow.GodotReceiveData) {
@@ -164,7 +164,7 @@ export function sendTo(targetGodotId, data) {
 }
 
 export function leaveMeshSession() {
-	console.log("Leaving WebRTC Mesh Session...");
+	// console.log("Leaving WebRTC Mesh Session...");
 
 	if (meshState.peer) {
 		meshState.peer.destroy();
