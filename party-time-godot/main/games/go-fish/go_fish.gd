@@ -1,8 +1,6 @@
 extends GameScene
 class_name GoFish
 
-signal quick_time_concluded
-
 @export var hand_scene : PackedScene
 @export var player_nodes : Node
 @export var my_hand_node : CardHand
@@ -151,26 +149,16 @@ func display_cards():
 			my_hand_node.update_hand( hand, players[player]['block_list'] )
 		else:
 			hand_node.update_hand( hand )
-		
 		hand_node.update_score( score )
 	
-	#print("My passive is ", players[GameManager.my_uid]["passive"])
-	
-	get_tree().call_group("PassiveCard", "on_passive_update", players[GameManager.my_uid]["passive"])
 
-var request_timestamp := 0.0
 static var target_player_id := ''
-
-var elapsed_time := 0.0
-static var quick_time_on_going : bool
 
 func apply_move( move, _set_up:bool=false ):
 	var move_type : MOVES = int(move.type) as MOVES
 	match move_type:
 		MOVES.ASK:
 			if not _set_up:
-			#tell everyone who is being asked.
-				request_timestamp = move.timestamp
 				target_player_id = move.target
 				
 				#we are being asked.
@@ -178,11 +166,11 @@ func apply_move( move, _set_up:bool=false ):
 					my_hand_node.shake_card( move.rank )
 			
 			action_message(
-				str(get_player_name(move.player), " is asking ", 
+				str(get_player_name(move.player), " asked ", 
 				get_player_name(move.target), " for some ", CARDS[move.rank].name),
 				Color(0.235, 0.286, 0.428, 0.773)
 			)
-		MOVES.TAKE:
+			
 			var ranks : Array = players[move.target]["hand"
 			].filter( func(card): return card.rank == move.rank )
 			
@@ -190,6 +178,9 @@ func apply_move( move, _set_up:bool=false ):
 			
 			#GoFish
 			if ranks.is_empty():
+				#if the player is me then I should go fish.
+				if move.player == GameManager.my_uid:
+					go_fish()
 				draw_from_deck( move.player )
 				update_turn( get_next_turn( turn ) )
 			else:
@@ -203,6 +194,9 @@ func apply_move( move, _set_up:bool=false ):
 					delete_one_card("silver_tongue", move.target)
 					
 					#Player will draw.
+					#if the player is me then I should go fish.
+					if move.player == GameManager.my_uid:
+						go_fish()
 					draw_from_deck( move.player )
 					action_message(str(get_player_name(move.target), " used block!"))
 					
@@ -220,13 +214,14 @@ func apply_move( move, _set_up:bool=false ):
 						CARDS[move.rank].name, " from ", get_player_name(move.target))
 					)
 		MOVES.GOFISH:
-			pass
+			var fishing_score : float = move.score
+			draw_from_deck( move.player, fishing_score )
 		MOVES.PASSIVE:
-			delete_one_card(move.passive, move.player)
+			print(" on passive use ", move.passive, move.player)
 			
-			print("on passive use ", move.passive, move.player)
 			match move.passive:
 				"silver_tongue": players[move.player]["block_list"].append(move.rank)
+			delete_one_card(move.passive, move.player)
 		MOVES.USE:
 			delete_one_card(move.power, move.player)
 			var pool = PASSIVES.merged(POWERS)
@@ -288,6 +283,13 @@ func apply_move( move, _set_up:bool=false ):
 			is_my_turn = false
 	check_game()
 
+#spawn the fishing visuals
+func go_fish():
+	print(" I went finishing ")
+
+func on_fish(score : float):
+	make_move({ "type" : MOVES.GOFISH, "player" : GameManager.my_uid, "score" : score })
+
 #this can also be used to remove one card from someone's inventory
 func delete_one_card(rank, id):
 	var x = players[id]["hand"].filter(func(card): return card.rank != rank)
@@ -300,10 +302,6 @@ func delete_one_card(rank, id):
 		x.append_array(power)
 	
 	print(power, " after removal")
-	
-	#as in their are no more of that passive.
-	if PASSIVES.has(rank) and power.is_empty():
-		players[id]["passive"] = ''
 	
 	players[id]["hand"] = x
 
@@ -371,6 +369,8 @@ func end_game():
 
 func draw_from_deck(target_id : String, _score: float=0.2):
 	action_message( str(get_player_name(target_id), " went fishing.") )
+	if deck.is_empty(): return
+	
 	var new_card = deck.pop_back()
 	
 	#var cards_to_add = []
@@ -391,7 +391,8 @@ func draw_from_deck(target_id : String, _score: float=0.2):
 			players[target_id]['hand'].append( power_card )
 			
 			if target_id != GameManager.my_uid:
-				action_message( str( get_player_name(target_id), " found something special!") )
+				action_message( 
+					str( get_player_name(target_id), " found something special!") )
 	
 	action_message( str( deck.size(), " cards left in the deck") )
 
@@ -406,15 +407,13 @@ func _draw_needed_card(target_id: String):
 	for card in player_hand:
 		if card.has("rank") and not needed_ranks.has(card.rank):
 			needed_ranks.append(card.rank)
-			
+	
 	# Search the deck from top to bottom for a matching rank
 	for i in range(deck.size() - 1, -1, -1):
 		if needed_ranks.has(deck[i].rank):
 			var found_card = deck[i]
-			deck.remove_at(i) # Pull it out of the middle of the deck (use .remove(i) if in Godot 3.x)
+			deck.remove_at(i)
 			return found_card
-			
-	# If no matching card was found in the deck, just give them a random card
 	return deck.pop_back()
 
 func get_next_turn( _turn ) -> int:
@@ -432,17 +431,19 @@ func update_turn(_turn : int):
 	"Waiting for "+ GameManager.chat_data.members.values()[turn] )
 
 func _process(_delta):
-	#TODO use browsers system time from now on.
-	elapsed_time = abs(request_timestamp - Time.get_unix_time_from_system())
-	if quick_time_on_going != (elapsed_time < REQUEST_TIME):
-		if quick_time_on_going: quick_time_concluded.emit()
-		quick_time_on_going = elapsed_time < REQUEST_TIME
+	pass
 	
-	var hand_node : CardHand = player_nodes.get_node_or_null(target_player_id)
-	if not hand_node:
-		hand_node = my_hand_node
-	hand_node.quick_time.visible = quick_time_on_going
-	hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
+	#TODO use browsers system time from now on.
+	#elapsed_time = abs(request_timestamp - Time.get_unix_time_from_system())
+	#if quick_time_on_going != (elapsed_time < REQUEST_TIME):
+		#if quick_time_on_going: quick_time_concluded.emit()
+		#quick_time_on_going = elapsed_time < REQUEST_TIME
+	#
+	#var hand_node : CardHand = player_nodes.get_node_or_null(target_player_id)
+	#if not hand_node:
+		#hand_node = my_hand_node
+	#hand_node.quick_time.visible = quick_time_on_going
+	#hand_node.quick_time.value = (elapsed_time / REQUEST_TIME) * 100.0
 
 func action_message(message : String, color:Color=Color('303030ff')):
 	if move_index < move_count - 2: return
@@ -475,17 +476,8 @@ func on_ask(player_name, card_rank):
 	#TODO if the last move was us and was of type "ASK" and we
 	#have exceded the time of asking then the just execute
 	make_move({
-		"player" : GameManager.my_uid, "type" : MOVES.ASK, "rank": card_rank,
-		"timestamp" : Time.get_unix_time_from_system(), "target": player_id
-	})
-	
-	#this has to happen outside of the game (i.e even if the game has been closed)
-	on_await(false)
-	
-	await quick_time_concluded
-	
-	make_move({ "player" : GameManager.my_uid, "target": player_id, "type" : MOVES.TAKE, "rank": card_rank })
-	on_await(true)
+		"player" : GameManager.my_uid, "type" : MOVES.ASK, 
+		"rank": card_rank, "target": player_id })
 
 func get_player_id(player_name):
 	return GameManager.chat_data.members.find_key(player_name)

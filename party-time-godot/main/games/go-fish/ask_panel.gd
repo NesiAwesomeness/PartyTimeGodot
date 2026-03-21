@@ -74,11 +74,11 @@ func open_player_select_menu():
 	player_select_menu_button.hide()
 
 func on_player_selected(player_name):
-	var player_id = get_player_id(player_name)
+	#var player_id = get_player_id(player_name)
 	
-	if GoFish.target_player_id == player_id and GoFish.quick_time_on_going: 
-		print("can't select them yet...")
-		return
+	#if GoFish.target_player_id == player_id and GoFish.quick_time_on_going: 
+		#print("can't select them yet...")
+		#return
 	
 	show()
 	
@@ -121,7 +121,7 @@ func set_up_panel( is_power : bool ):
 	)
 
 func on_send_pressed():
-	var target_id : String = get_player_id(selected_player_name)
+	#var target_id : String = get_player_id(selected_player_name)
 	
 	if ask_mode:
 		if not GoFish.is_my_turn:
@@ -136,9 +136,9 @@ func on_send_pressed():
 		if GoFish.is_my_turn:
 			return
 		
-		if GoFish.quick_time_on_going and target_id == GoFish.target_player_id:
-			print("I can't use powers on ", selected_player_name, " right now")
-			return
+		#if GoFish.quick_time_on_going and target_id == GoFish.target_player_id:
+			#print("I can't use powers on ", selected_player_name, " right now")
+			#return
 		
 		use_power.emit(selected_player_name, selected_rank)
 		#print("I'm using powers on ", selected_player_name)

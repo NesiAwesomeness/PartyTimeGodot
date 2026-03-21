@@ -28,8 +28,6 @@ func update_hand(new_hand : Array, block_list:Array=[]):
 	score_tag.show()
 	
 	if is_me:
-		hand_container.custom_minimum_size.y = 180
-		
 		var cards_to_remove : Array = hand.filter(func(card): return not new_hand.has(card))
 		hand = new_hand
 		
@@ -48,7 +46,13 @@ func update_hand(new_hand : Array, block_list:Array=[]):
 			card_node.name = card.rank
 			
 			hand_container.add_child(card_node)
-			card_node.tree_exited.connect(arrange_cards)
+			card_node.tree_exited.connect(
+				arrange_cards
+			)
+			
+			card_node.visibility_changed.connect(
+				arrange_cards
+			)
 			
 			card_node.rearrange.connect( func(index):
 				hand_container.move_child(card_node, index)

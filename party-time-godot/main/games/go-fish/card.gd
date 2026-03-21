@@ -46,7 +46,6 @@ var booked := false
 
 func update_count(_count : int, is_protected:bool=false):
 	protection_label.visible = is_protected
-	show()
 	
 	if _count == 0:
 		if GoFish.booked_cards.has(rank):
@@ -109,6 +108,7 @@ func update_count(_count : int, is_protected:bool=false):
 				Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			_anim_tween.chain().tween_property(card_body, "position:y", 0.0, 0.3)
 	count = _count
+	
 
 var active := false
 var is_me := false
@@ -274,11 +274,14 @@ func on_passive_update(passive : String):
 	card_body.position.y = -32.0 if active else 0.0
 
 func hand_updated(_is_me : bool=false, _full_space:bool=false):
-	var center_index : float = (get_parent().get_child_count() - 1) / 2.0
+	var card_count : int = get_parent().get_children().filter(
+		func(node : Node): return node.visible).size()
+	
+	var center_index : float = (card_count - 1) / 2.0
 	var center_offset: float = get_index() - center_index
 	var target_rotation : float = center_offset * 3.6 * float(_is_me)
 	
-	var spacing = 120.0 if _is_me else 28.0
+	var spacing = 108.0 if _is_me else 28.0
 	var target_x: float = center_offset * spacing
 	var target_y: float = center_offset * center_offset * 3.6 * float(_is_me)
 	
@@ -286,7 +289,7 @@ func hand_updated(_is_me : bool=false, _full_space:bool=false):
 	# Animate the card to its new position and rotation smoothly
 	
 	var tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(self, "position",  Vector2(target_x, target_y), duration)
+	tween.tween_property(self, "position",  Vector2(target_x, target_y + (32.0 * float(_is_me))), duration)
 	tween.tween_property(self, "rotation_degrees", target_rotation, duration).set_delay(0.25)
 	tween.chain().tween_callback( func(): z_index = 0 )
 
