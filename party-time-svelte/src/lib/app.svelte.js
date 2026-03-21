@@ -47,8 +47,8 @@ class appState {
 				this.lastCheckedRequests = userInfo.lastCheckedRequests;
 				this.loading = false;
 
-				this.fetchPlaygroundData();
 				this.uid = user.uid;
+				this.fetchPlaygroundData();
 
 			} else {
 				this.uid = '';
