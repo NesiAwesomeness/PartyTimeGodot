@@ -28,7 +28,7 @@
 			toast.error('Username cannot contain spaces.');
 			return false;
 		}
-		if (password.length < 8) {
+		if (password.length < 6) {
 			toast.error('Password must be at least 8 characters long.');
 			return false;
 		}
