@@ -4,27 +4,19 @@
 	import { onMount } from 'svelte';
 
 	let bubble = null;
-	let { id, gameData } = $props();
+	let { id, gameInfo } = $props();
 
-	let isTurnBased = $derived(
-		Object.keys(gameData).includes('gameState') &&
-			Object.keys(gameData.gameState).includes('playerTurn')
-	);
+	let isTurnBased = $derived(Object.keys(gameInfo).includes('turn'));
+	let isRoundPlay = $derived(Object.keys(gameInfo).includes('round'));
 
-	let isRoundPlay = $derived(
-		Object.keys(gameData).includes('gameState') && Object.keys(gameData.gameState).includes('round')
-	);
-
-	let fromYou = $derived(
-		isTurnBased ? gameData.gameState.playerTurn != app.currentChat.playerIndex : true
-	);
+	let fromYou = $derived(isTurnBased ? gameInfo.turn != app.currentChat.playerIndex : true);
 
 	let oppName = $derived(
-		app.currentChat.isGroup ? Object.values(app.currentChat.members)[gameData.turn] : 'Them'
+		app.currentChat.isGroup ? Object.values(app.currentChat.members)[gameInfo.turn] : 'Them'
 	);
 
 	let whoPlaying = $derived(fromYou ? oppName : 'You');
-	let timestamp = $derived(getDisplayTime(gameData.timestamp));
+	let timestamp = $derived(getDisplayTime(gameInfo.timestamp));
 
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -32,7 +24,7 @@
 
 <button
 	onclick={() => {
-		app.setGame({ id, gameData, isTurnBased });
+		app.setGame({ id, gameInfo });
 		dispatch('click', bubble);
 	}}
 	class="flex w-full aspect-[100/40] max-h-[160px] min-w-[240px] cursor-pointer font-['Funnel_Display',sans-serif] bg-black/[0.135] border-none p-0 {fromYou
@@ -57,9 +49,9 @@
 				: 'bg-[#cb4444]'}">{whoPlaying}</span
 		>
 		<div class="grid content-end h-full min-w-[90px] font-semibold text-xl text-white/[0.815]">
-			<span class="w-fit">{gameData.name}</span>
+			<span class="w-fit">{gameInfo.name}</span>
 			{#if isRoundPlay}
-				<span class="text-base w-fit">Round {gameData.gameState.round}</span>
+				<span class="text-base w-fit">Round {gameInfo.gameState.round}</span>
 			{/if}
 		</div>
 	</div>

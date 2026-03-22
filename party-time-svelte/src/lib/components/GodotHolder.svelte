@@ -2,12 +2,16 @@
 	import { app, game } from '$lib/app.svelte';
 	import { rtdb } from '$lib/firebase';
 	import {
+		child,
+		get,
+		increment,
 		onChildAdded,
 		onDisconnect,
 		onValue,
 		push,
 		ref,
 		remove,
+		set,
 		update
 	} from 'firebase/database';
 	import { broadcast, joinSession, leaveMeshSession, meshState, sendTo } from '$lib/webrtc';
@@ -17,7 +21,6 @@
 
 	let { rect = { x: 0.0, y: 0.0, h: 1.0, w: 1.0, o: 0.0, r: 0.0 } } = $props();
 	let gameMovesUnsub;
-	let playerStateUnsub;
 
 	let isGameOpen = $derived(app.currentGame.id !== '');
 	let isActive = false;
@@ -31,51 +34,72 @@
 		leaveSession();
 	}
 
-	$effect(() => {
+	let gameLoading = $state(false);
+
+	$effect(async () => {
+		let members = {};
+
+		if (app.currentChat?.members && isLoaded) {
+			members = app.currentChat.members;
+			const memberIds = Object.keys(members);
+
+			pushGodot('update_chat', {
+				playerIndex: app.currentChat.playerIndex,
+				memberCount: memberIds.length,
+				members,
+				myID: app.uid
+			});
+		}
+
+		if (game.gameRequest && isLoaded && !open) {
+			pushGodot('initialize_game', game.gameRequest);
+		}
+
 		if (open != isGameOpen && iframeRef && iframeRef.contentWindow) {
 			open = isGameOpen;
 
-			const cw = iframeRef.contentWindow;
+			gameLoading = true;
 
 			if (isGameOpen) {
+				const cw = iframeRef.contentWindow;
 				console.log(app.currentGame.id);
 
-				const gameServe = {
-					...app.currentGame.gameData,
-					moves: Object.keys(app.currentGame.gameData).includes('moves')
-						? Object.keys(app.currentGame.gameData.moves).length
-						: 0
-				};
+				const gameStateRef = ref(
+					rtdb,
+					`chats/${app.currentChat.id}/gameState/${app.currentGame.id}`
+				);
 
-				if (cw.startGame) {
-					cw.startGame(gameServe);
+				const snapshot = await get(gameStateRef);
+
+				if (snapshot.exists()) {
+					let moveIndex = 0;
+
+					const gameState = snapshot.val();
+					const gameData = { ...gameState, ...app.currentGame.gameInfo };
+
+					if (cw.startGame) {
+						console.log(gameData);
+
+						cw.startGame(gameData);
+					}
+
+					joinSession();
+
+					const gameMovesRef = ref(
+						rtdb,
+						`chats/${app.currentChat.id}/gameMoves/${app.currentGame.id}/`
+					);
+
+					gameMovesUnsub = onChildAdded(gameMovesRef, (move) => {
+						const newMove = move.val();
+						if (newMove) {
+							moveIndex++;
+							cw.newMove(newMove);
+						}
+					});
+
+					gameLoading = false;
 				}
-
-				joinSession();
-
-				const gameMovesRef = ref(
-					rtdb,
-					`chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`
-				);
-
-				gameMovesUnsub = onChildAdded(gameMovesRef, (snapshot) => {
-					const newMove = snapshot.val();
-					if (newMove) {
-						cw.newMove(newMove);
-					}
-				});
-
-				const playerStateRef = ref(
-					rtdb,
-					`chats/${app.currentChat.id}/games/${app.currentGame.id}/playerState/`
-				);
-
-				playerStateUnsub = onValue(playerStateRef, (snapshot) => {
-					const playerState = snapshot.val();
-					if (playerState) {
-						pushGodot('update_players', playerState);
-					}
-				});
 			}
 		}
 	});
@@ -91,22 +115,46 @@
 
 		const cw = iframeRef.contentWindow;
 
+		//WebRTC stuff
 		cw.GodotBroadcastData = (data) => {
 			broadcast(data);
-		};
-
-		cw.makeMove = async (move) => {
-			const gameRef = ref(rtdb, `chats/${app.currentChat.id}/games/${app.currentGame.id}/moves/`);
-			await push(gameRef, move);
 		};
 
 		cw.GodotSendToPlayer = (targetPeerId, data) => {
 			sendTo(targetPeerId, data);
 		};
 
+		//Firebase Stuff
+		cw.makeMove = async (moveString) => {
+			const updates = {};
+			console.log(moveString);
+
+			const newMoveKey = push(
+				child(ref(rtdb), `chats/${app.currentChat.id}/gameMoves/${app.currentGame.id}/`)
+			).key;
+
+			updates[`chats/${app.currentChat.id}/gameMoves/${app.currentGame.id}/${newMoveKey}`] =
+				moveString;
+
+			updates[`chats/${app.currentChat.id}/gameState/${app.currentGame.id}/moves/`] = increment(1);
+
+			await update(ref(rtdb), updates);
+		};
+
+		cw.updateTurn = async (turn) => {
+			if (app.currentGame.id === '') return;
+
+			console.log(turn);
+
+			const turnRef = ref(rtdb, `chats/${app.currentChat.id}/gameInfos/${app.currentGame.id}/turn`);
+
+			await set(turnRef, turn);
+		};
+
+		// Godot svelte stuff
 		cw.gameClose = () => {
-			app.resetGame();
 			leaveSession();
+			app.resetGame();
 		};
 
 		cw.getTime = () => {
@@ -119,27 +167,6 @@
 
 		console.log('Godot JS Bridge Outbound Functions Injected!');
 	}
-
-	$effect(() => {
-		let members = {};
-
-		if (app.currentChat?.members && isLoaded && !open) {
-			members = app.currentChat.members;
-			const memberIds = Object.keys(members);
-
-			pushGodot('update_chat', {
-				playerIndex: app.currentChat.playerIndex,
-				memberCount: memberIds.length,
-				members,
-				myID: app.uid
-			});
-		}
-
-		if (game.gameRequest && isLoaded) {
-			pushGodot('initialize_game', game.gameRequest);
-			game.resetRequest();
-		}
-	});
 
 	// SVELTE TO GODOT
 	function pushGodot(functionName, data) {
@@ -170,31 +197,35 @@
 	}
 
 	function leaveSession() {
-		if (meshState.myGodotId === 0) return;
+		if (meshState.myGodotId === null) return;
 
 		const sessionRef = ref(
 			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${meshState.myGodotId}`
+			`chats/${app.currentChat.id}/gameState/${app.currentGame.id}/active_players/${meshState.myGodotId}`
 		);
 
 		remove(sessionRef);
 		onDisconnect(sessionRef).cancel();
 
 		if (gameMovesUnsub) gameMovesUnsub();
-		if (playerStateUnsub) playerStateUnsub();
 
 		leaveMeshSession();
 		meshState.myGodotId = null;
 	}
 
-	async function sendGame(gameData) {
-		const chatRef = ref(rtdb, `chats/${app.currentChat.id}/games`);
-		const game = { ...gameData, timestamp: Date.now() };
-		console.log(game);
+	async function sendGame(data) {
+		const gameKey = push(child(ref(rtdb), `chats/${app.currentChat.id}/gameInfos/`)).key;
+		const updates = {};
 
-		try {
-			await push(chatRef, game);
-		} catch (error) {}
+		updates[`chats/${app.currentChat.id}/gameInfos/${gameKey}`] = {
+			...data.gameInfo,
+			timestamp: Date.now()
+		};
+
+		updates[`chats/${app.currentChat.id}/gameState/${gameKey}`] = data.gameData;
+
+		game.resetRequest();
+		await update(ref(rtdb), updates);
 	}
 
 	// SVELTE to FIREBASE
@@ -238,6 +269,7 @@
 	});
 
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -258,6 +290,15 @@
     border-radius: {rect.r}px;
 "
 >
+	{#if gameLoading}
+		<div
+			out:fade={{ delay: 100, duration: 200 }}
+			class="col-start-1 row-start-1 border-none w-full h-full z-10 bg-[#131313] flex items-center justify-center text-white text-xl font-bold"
+		>
+			Loading...
+		</div>
+	{/if}
+
 	<iframe
 		bind:this={iframeRef}
 		id="godot-iframe"
@@ -268,7 +309,7 @@
 	>
 	</iframe>
 	<div
-		class="col-start-1 row-start-1 flex absolute flex-col justify-self-end justify-between h-[calc(100dvh-72px)] m-[36px]"
+		class="col-start-1 z-10 row-start-1 flex absolute flex-col justify-self-end justify-between h-[calc(100dvh-72px)] m-[36px]"
 	>
 		<button
 			title="Close Game"

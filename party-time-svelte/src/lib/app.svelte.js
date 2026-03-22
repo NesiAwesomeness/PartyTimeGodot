@@ -202,7 +202,6 @@ class appState {
 			// 2. Set up RTDB chat reference
 			const chatRef = ref(rtdb, `chats/${groupID}`);
 			await set(chatRef, {
-				games: { null: 0 }, // Equivalent to NULL_GAME
 				members: groupMembers
 			});
 
@@ -241,10 +240,7 @@ class appState {
 			members[userID] = myUsername;
 			members[request.id] = request.username;
 
-			const blank = { null: 0 };
-
 			await set(chatRef, {
-				games: blank,
 				members: members
 			});
 
@@ -301,17 +297,17 @@ class appState {
 
 	currentGame = $state({
 		id: "",
-		gameData: {},
+		gameInfo: {},
 	})
 
 	setGame(game) {
-		this.currentGame = { ...this.currentGame, ...game }
+		this.currentGame = game
 	}
 
 	resetGame() {
 		this.currentGame = {
 			id: "",
-			gameData: {},
+			gameInfo: {},
 		}
 	}
 

@@ -487,7 +487,7 @@
 									animate:flip={{ duration: 400 }}
 									in:fly={{ y: 20, duration: 300, delay: i * 50 }}
 								>
-									<GameBubble gameData={item} id={item.id} on:click={openGame} />
+									<GameBubble gameInfo={item} id={item.id} on:click={openGame} />
 								</div>
 							{/each}
 						</div>

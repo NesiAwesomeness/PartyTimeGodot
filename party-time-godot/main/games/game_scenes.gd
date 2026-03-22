@@ -37,3 +37,8 @@ func on_set_up():
 static func make_move( move ):
 	var window = JavaScriptBridge.get_interface("window")
 	window.makeMove( move )
+
+#save to the cloud
+func save_turn( turn ):
+	var window = JavaScriptBridge.get_interface("window")
+	window.updateTurn( turn )

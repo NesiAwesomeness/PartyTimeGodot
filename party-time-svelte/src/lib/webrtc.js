@@ -23,7 +23,7 @@ export async function joinSession() {
 
 	const playersRef = ref(
 		rtdb,
-		`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players`
+		`chats/${app.currentChat.id}/gameState/${app.currentGame.id}/active_players/`
 	);
 
 	// The "Ticket Booth" - securely claim a slot from 1 to 32
@@ -66,7 +66,7 @@ function finalizeJoin(existingPlayersData) {
 		// If I close the tab, free up my chair in Firebase
 		const sessionRef = ref(
 			rtdb,
-			`chats/${app.currentChat.id}/games/${app.currentGame.id}/active_players/${meshState.myGodotId}`
+			`chats/${app.currentChat.id}/gameState/${app.currentGame.id}/active_players/${meshState.myGodotId}`
 		);
 
 		onDisconnect(sessionRef).remove();

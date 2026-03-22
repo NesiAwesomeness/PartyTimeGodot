@@ -64,12 +64,23 @@ enum MOVES {
 
 func initialize_game() -> Dictionary:
 	return {
-		'name' : "Go Fish",
-		'key' : 'GoFish',
-		'turn' : 1,
-		"hand_size" : 5,
-		'dealer' : get_player_name(GameManager.my_uid),
-		'seed' : randi(),
+		#this is stuff that's just meant to be displayed.
+		"gameInfo" : {
+			'name' : "Go Fish",
+			'key' : 'GoFish',
+			#this is just displayed
+			'turn' : 1,
+		},
+		
+		#this is stuff the game needs.
+		"gameData" : {
+			"hand_size" : 5,
+			'dealer' : GameManager.my_uid,
+			'seed' : randi(),
+			'moves' : 0,
+			#this should be decided by the game at the start
+			'start_turn' : 1
+		},
 	}
 
 @onready var rng = RandomNumberGenerator.new()
@@ -118,10 +129,10 @@ func start_game( game_data ):
 			hand_node.hand_name = GameManager.chat_data.members[member]
 			player_nodes.add_child(hand_node)
 	
-	print( game_data.dealer , " just dealt the cards")
-	update_turn( int( game_data.turn ) )
+	print( get_player_name( game_data.dealer ), " just dealt the cards")
 	
-	move_count = game_data.moves
+	update_turn( int(game_data.start_turn))
+	move_count = int( game_data.moves )
 	
 	check_game()
 	#only do this at the start of the game
@@ -131,8 +142,6 @@ func start_game( game_data ):
 func on_new_move( move : String ):
 	move_index += 1
 	var is_setting_up = move_index < move_count
-	
-	print( move )
 	apply_move( move , is_setting_up )
 	
 	if not is_setting_up: display_cards()
@@ -157,7 +166,7 @@ func apply_move( move : String, _set_up:bool=false ):
 	var move_type = int( details[0] )
 	var player = details[1]
 	
-	print(move_type, " ", MOVES.keys()[int(move_type)])
+	print(move_index, " ", MOVES.keys()[int(move_type)])
 	
 	match move_type:
 		MOVES.ASK:
@@ -229,11 +238,14 @@ func apply_move( move : String, _set_up:bool=false ):
 			var power = details[2]
 			var target = details[3]
 			
-			delete_one_card(power, player )
+			var target_block_list : Array = players[target]["block_list"]
+			var player_block_list : Array = players[player]["block_list"]
+			
 			var pool = PASSIVES.merged(POWERS)
 			
 			match power:
 				"magnifying_glass":
+					delete_one_card(power, player)
 					if not _set_up:
 						var target_hand : Array = players[target].hand
 						var player_hand : Array = players[player].hand
@@ -255,36 +267,39 @@ func apply_move( move : String, _set_up:bool=false ):
 							else:
 								action_message("We have nothing in common")
 				"fast_hands":
-					
 					var target_hand : Array = players[target].hand
 					var player_hand : Array = players[player ].hand
 					
-					var t = target_hand.filter(func(card): return not pool.has(card.rank))
-					var p = player_hand.filter(func(card): return not pool.has(card.rank))
+					var t = target_hand.filter(func(card): return not pool.has(card.rank) and not target_block_list.has(card.rank))
+					var p = player_hand.filter(func(card): return not pool.has(card.rank) and not player_block_list.has(card.rank))
 					
-					# 1. Pick the ranks
-					var target_rank = t[rng.randi() % t.size()]['rank']
-					var player_rank = p[rng.randi() % p.size()]['rank']
-					
-					# 2. Extract the actual cards
-					var cards_from_target = target_hand.filter(func(c): return c.rank == target_rank)
-					var cards_from_player = player_hand.filter(func(c): return c.rank == player_rank)
-					
-					# 3. Filter them out of the original hands
-					var new_target_hand = target_hand.filter(func(c): return c.rank != target_rank)
-					var new_player_hand = player_hand.filter(func(c): return c.rank != player_rank)
-					
-					# 4. Add the SWAPPED cards to the other person's hand
-					new_target_hand.append_array(cards_from_player)
-					new_player_hand.append_array(cards_from_target)
-					
-					# 5. Update the state
-					players[target].hand = new_target_hand
-					players[player ].hand = new_player_hand
-					
-					if not _set_up:
-						print(get_player_name(player )," just took ", CARDS[target_rank].name, " from ", 
-						get_player_name(target), " and gave them ", CARDS[player_rank].name)
+					if t.size() > 0 and p.size() > 0:
+						delete_one_card(power, player)
+						
+						# 1. Pick the ranks
+						var target_rank = t[rng.randi() % t.size()]['rank']
+						var player_rank = p[rng.randi() % p.size()]['rank']
+						
+						# 2. Extract the actual cards
+						var cards_from_target = target_hand.filter(func(c): return c.rank == target_rank)
+						var cards_from_player = player_hand.filter(func(c): return c.rank == player_rank)
+						
+						# 3. Filter them out of the original hands
+						var new_target_hand = target_hand.filter(func(c): return c.rank != target_rank)
+						var new_player_hand = player_hand.filter(func(c): return c.rank != player_rank)
+						
+						# 4. Add the SWAPPED cards to the other person's hand
+						new_target_hand.append_array(cards_from_player)
+						new_player_hand.append_array(cards_from_target)
+						
+						# 5. Update the state
+						players[target].hand = new_target_hand
+						players[player ].hand = new_player_hand
+						
+						if not _set_up:
+							print(get_player_name(player )," just took ", CARDS[target_rank].name, " from ", 
+							get_player_name(target), " and gave them ", CARDS[player_rank].name)
+					else: if not _set_up: print("nothing to swap")
 		MOVES.END:
 			turn = -1
 			is_my_turn = false
@@ -423,12 +438,12 @@ func _draw_needed_card(target_id: String):
 	return deck.pop_back()
 
 func get_next_turn( _turn ) -> int:
-	if is_my_turn:
-		#update the turn value here
-		pass
 	return wrapi( _turn + 1, 0, int(GameManager.chat_data.memberCount) )
 
 func update_turn(_turn : int):
+	if turn != _turn and is_my_turn and move_index >= move_count:
+		save_turn(_turn,)
+	
 	turn = _turn
 	is_my_turn = _turn == int( GameManager.chat_data.playerIndex )
 	

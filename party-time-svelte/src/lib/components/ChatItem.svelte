@@ -23,29 +23,46 @@
 	let forYou = $state(false);
 
 	let currentUnsubscribe = null;
+	let memberUnsubscribe = null;
 
-	onMount(() => {
+	function unSub() {
 		if (currentUnsubscribe) {
 			currentUnsubscribe();
 			currentUnsubscribe = null;
 		}
 
-		const chatRef = ref(rtdb, `chats/${chatItem.id}`);
+		if (memberUnsubscribe) {
+			memberUnsubscribe();
+			memberUnsubscribe = null;
+		}
+	}
+
+	onMount(() => {
+		unSub();
+
+		const chatRef = ref(rtdb, `chats/${chatItem.id}/gameInfos`);
+		const memberRef = ref(rtdb, `chats/${chatItem.id}/members`);
+
+		memberUnsubscribe = onValue(memberRef, (snapshot) => {
+			if (snapshot.exists()) {
+				members = snapshot.val();
+				playerIndex = Object.keys(members).indexOf(app.uid);
+			}
+
+			if (app.currentChat.id === chatItem.id) {
+				selectChat();
+			}
+		});
 
 		currentUnsubscribe = onValue(chatRef, (snapshot) => {
 			let newTimestamp = chatItem.timestamp;
 
 			if (snapshot.exists()) {
-				const chatData = snapshot.val();
+				const games = snapshot.val();
 
-				members = chatData.members;
-				playerIndex = Object.keys(members).indexOf(app.uid);
-
-				gameArray = Object.entries(chatData.games)
-					.filter(([key, value]) => key !== 'null')
-					.map(([key, value]) => {
-						return { id: key, ...value };
-					});
+				gameArray = Object.entries(games).map(([key, value]) => {
+					return { id: key, ...value };
+				});
 
 				gameArray.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -93,10 +110,7 @@
 	}
 
 	onDestroy(() => {
-		if (currentUnsubscribe) {
-			currentUnsubscribe();
-			currentUnsubscribe = null;
-		}
+		unSub();
 	});
 </script>
 

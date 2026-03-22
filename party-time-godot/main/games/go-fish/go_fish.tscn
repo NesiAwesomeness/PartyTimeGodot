@@ -235,6 +235,9 @@ quick_time = NodePath("../../../ActionPanel/Container/QuickTime")
 [node name="Label" parent="Me/HBoxContainer/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="0" unique_id=761011171]
 visible = false
 
+[node name="Score" parent="Me/HBoxContainer/Hand/NameTag" parent_id_path=PackedInt32Array(913138055, 1288443956) index="1" unique_id=414416212]
+visible = false
+
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=12555329]
 anchors_preset = 10
 anchor_right = 1.0
